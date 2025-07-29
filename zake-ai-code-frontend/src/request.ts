@@ -13,7 +13,11 @@ const myAxios = axios.create({
 // 全局请求拦截器
 myAxios.interceptors.request.use(
   function (config) {
-    // Do something before request is sent
+    // 从localStorage获取token并添加到请求头
+    const token = localStorage.getItem('token')
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
     return config
   },
   function (error) {
@@ -34,14 +38,42 @@ myAxios.interceptors.response.use(
         !window.location.pathname.includes('/user/login')
       ) {
         message.warning('请先登录')
+        // 清除本地存储的用户信息
+        localStorage.removeItem('userInfo')
+        localStorage.removeItem('token')
         window.location.href = `/user/login?redirect=${window.location.href}`
       }
     }
     return response
   },
   function (error) {
-    // Any status codes that falls outside the range of 2xx cause this function to trigger
-    // Do something with response error
+    // 处理网络错误
+    if (error.response) {
+      const { status, data } = error.response
+      switch (status) {
+        case 401:
+          message.error('未授权，请重新登录')
+          localStorage.removeItem('userInfo')
+          localStorage.removeItem('token')
+          window.location.href = '/user/login'
+          break
+        case 403:
+          message.error('权限不足')
+          break
+        case 404:
+          message.error('请求的资源不存在')
+          break
+        case 500:
+          message.error('服务器内部错误')
+          break
+        default:
+          message.error(data?.message || '请求失败')
+      }
+    } else if (error.request) {
+      message.error('网络连接失败，请检查网络')
+    } else {
+      message.error('请求配置错误')
+    }
     return Promise.reject(error)
   },
 )
