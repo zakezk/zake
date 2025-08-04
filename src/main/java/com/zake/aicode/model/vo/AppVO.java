@@ -1,5 +1,6 @@
 package com.zake.aicode.model.vo;
 
+import com.mybatisflex.annotation.RelationManyToOne;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -69,6 +70,7 @@ public class AppVO implements Serializable {
     /**
      * 创建用户信息
      */
+    @RelationManyToOne(selfField = "userId", targetField = "id")
     private UserVO user;
 
     private static final long serialVersionUID = 1L;

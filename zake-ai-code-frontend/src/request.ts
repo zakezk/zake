@@ -6,18 +6,19 @@ const myAxios = axios.create({
   baseURL: 'http://localhost:8123/api',
   // 超时连接
   timeout: 60000,
-  // 携带凭证
+  // 携带凭证，确保Session能正确传递
   withCredentials: true,
+  // 设置请求头
+  headers: {
+    'Content-Type': 'application/json',
+  },
 })
 
 // 全局请求拦截器
 myAxios.interceptors.request.use(
   function (config) {
-    // 从localStorage获取token并添加到请求头
-    const token = localStorage.getItem('token')
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
-    }
+    // 后端使用Session认证，不需要手动添加Authorization头
+    // withCredentials: true 已经确保Session能正确传递
     return config
   },
   function (error) {

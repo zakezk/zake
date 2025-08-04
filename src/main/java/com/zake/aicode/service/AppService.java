@@ -4,6 +4,7 @@ import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.core.service.IService;
 import com.zake.aicode.model.dto.app.AppAddRequest;
+import com.zake.aicode.model.dto.app.AppAdminUpdateRequest;
 import com.zake.aicode.model.dto.app.AppQueryRequest;
 import com.zake.aicode.model.dto.app.AppUpdateRequest;
 import com.zake.aicode.model.entity.App;
@@ -102,7 +103,7 @@ public interface AppService extends IService<App> {
      * @param appUpdateRequest 应用更新请求
      * @return 是否成功
      */
-    boolean updateApp(AppUpdateRequest appUpdateRequest);
+    boolean updateApp(AppAdminUpdateRequest appUpdateRequest);
 
     /**
      * 分页查询应用列表（管理员，支持根据除时间外的任何字段查询，每页数量不限）

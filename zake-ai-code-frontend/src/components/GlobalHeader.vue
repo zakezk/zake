@@ -125,9 +125,10 @@ const menuItems = computed(() => {
     { key: '/about', label: '关于' }
   ]
   
-  // 只有管理员才显示用户管理菜单
+  // 只有管理员才显示管理菜单
   if (isAdmin.value) {
     items.push({ key: '/admin/user', label: '用户管理' })
+    items.push({ key: '/admin/app', label: '应用管理' })
   }
   
   return items

@@ -1,23 +1,17 @@
 package com.zake.aicode.controller;
 
-import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
 import com.mybatisflex.core.paginate.Page;
-import com.mybatisflex.core.query.QueryWrapper;
 import com.zake.aicode.annotation.AuthCheck;
 import com.zake.aicode.common.BaseResponse;
 import com.zake.aicode.common.DeleteRequest;
 import com.zake.aicode.common.ResultUtils;
-import com.zake.aicode.constant.AppConstant;
 import com.zake.aicode.constant.UserConstant;
 import com.zake.aicode.exception.BusinessException;
 import com.zake.aicode.exception.ErrorCode;
 import com.zake.aicode.exception.ThrowUtils;
-import com.zake.aicode.model.dto.app.AppAddRequest;
-import com.zake.aicode.model.dto.app.AppDeployRequest;
-import com.zake.aicode.model.dto.app.AppQueryRequest;
-import com.zake.aicode.model.dto.app.AppUpdateRequest;
+import com.zake.aicode.model.dto.app.*;
 import com.zake.aicode.model.entity.App;
 import com.zake.aicode.model.entity.User;
 import com.zake.aicode.model.vo.AppVO;
@@ -32,7 +26,6 @@ import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -243,7 +236,7 @@ public class AppController {
      */
     @PostMapping("/update")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
-    public BaseResponse<Boolean> updateApp(@RequestBody AppUpdateRequest appUpdateRequest) {
+    public BaseResponse<Boolean> updateApp(@RequestBody AppAdminUpdateRequest appUpdateRequest) {
         if (appUpdateRequest == null || appUpdateRequest.getId() == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
