@@ -108,6 +108,18 @@ onMounted(async () => {
   }
   
   await loadAppInfo()
+  
+  // 检查是否有prompt参数，如果有就自动发送
+  const prompt = route.query.prompt as string
+  if (prompt && prompt.trim()) {
+    console.log('检测到prompt参数，自动发送:', prompt)
+    // 设置输入框内容
+    userInput.value = prompt
+    // 自动发送消息
+    await sendMessage(prompt)
+    // 清除query参数，避免刷新重复发送
+    router.replace({ path: route.path, query: {} })
+  }
 })
 
 // 发送消息
@@ -188,7 +200,9 @@ const sendMessage = async (content: string) => {
       isGenerating.value = false;
       // 清空输入框，准备下一次对话
       userInput.value = '';
-      // 生成完成时不自动滚动，让用户自由查看
+      // 生成完成后重新加载应用信息，以更新预览
+      console.log('代码生成完成，重新加载应用信息')
+      loadAppInfo();
     });
     
   } catch (error) {
@@ -247,6 +261,12 @@ const resetGeneratingState = () => {
   isGenerating.value = false
   currentStreamContent.value = ''
   console.log('生成状态已重置')
+}
+
+// 刷新预览
+const refreshPreview = () => {
+  console.log('刷新预览')
+  loadAppInfo()
 }
 
 // 处理发送按钮点击
@@ -440,6 +460,14 @@ const parseMarkdown = (content: string) => {
       <div class="preview-section">
         <div class="preview-header">
           <h3>网页预览</h3>
+          <button @click="refreshPreview" class="refresh-btn" title="刷新预览">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M23 4v6h-6"></path>
+              <path d="M1 20v-6h6"></path>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>
+              <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"></path>
+            </svg>
+          </button>
         </div>
         <div class="preview-content">
           <div v-if="appInfo?.codeGenType && appInfo?.id" class="web-preview">
@@ -972,12 +1000,35 @@ const parseMarkdown = (content: string) => {
 .preview-header {
   padding: 16px 20px;
   border-bottom: 1px solid #e8e8e8;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .preview-header h3 {
   margin: 0;
   font-size: 16px;
   color: #333;
+}
+
+.refresh-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 4px;
+  color: #666;
+  transition: all 0.2s;
+}
+
+.refresh-btn:hover {
+  background: #f5f5f5;
+  color: #1890ff;
+}
+
+.refresh-btn svg {
+  width: 16px;
+  height: 16px;
 }
 
 .preview-content {
