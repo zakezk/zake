@@ -21,7 +21,7 @@ import java.io.File;
 @RequestMapping("/static")
 public class StaticResourceController {
 
-//    // 应用生成根目录（用于浏览）
+//    // 应用生成根目录（用于浏览） 当传入参数 "user.dir"时，返回当前工作目录的绝对路径字符串。
 //    private static final String PREVIEW_ROOT_DIR = System.getProperty("user.dir") + "/tmp/code_output";
     // 应用生成根目录（用于浏览）
     private static final String PREVIEW_ROOT_DIR = AppConstant.CODE_OUTPUT_ROOT_DIR;

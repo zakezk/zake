@@ -62,7 +62,7 @@ const loadApps = async () => {
       pageSize: pageSize.value,
       appName: searchForm.value.appName || undefined,
       codeGenType: searchForm.value.codeGenType || undefined,
-      userId: searchForm.value.userId ? Number(searchForm.value.userId) : undefined,
+      userId: searchForm.value.userId || undefined,
       priority: searchForm.value.priority ? Number(searchForm.value.priority) : undefined
     })
     
@@ -102,7 +102,7 @@ const resetSearch = () => {
 const handleEdit = (app: API.AppVO) => {
   editingApp.value = app
   editForm.value = {
-    id: app.id || 0,
+    id: app.id || '',
     appName: app.appName || '',
     cover: app.cover || '',
     priority: app.priority || 0

@@ -64,16 +64,18 @@ public class AppController {
         User loginUser = userService.getLoginUser(request);
         // 调用服务生成代码（流式）
         Flux<String> contentFlux = appService.chatToGenCode(appId, message, loginUser);
-        // 转换为 ServerSentEvent 格式
+        // 转换为 ServerSentEvent 格式 解决空格丢失 和 前端不知道 什么时候结束的 问题
         return contentFlux
                 .map(chunk -> {
                     // 将内容包装成JSON对象
-                    Map<String, String> wrapper = Map.of("d", chunk);
+                    Map<String, String> wrapper = Map.of("d", chunk);//创建不可变 map
                     String jsonData = JSONUtil.toJsonStr(wrapper);
+                    // 创建 ServerSentEvent （sse）对象
                     return ServerSentEvent.<String>builder()
-                            .data(jsonData)
+                            .data(jsonData)//设置数据
                             .build();
                 })
+                // 2. 流终止处理：追加结束信号
                 .concatWith(Mono.just(
                         // 发送结束事件
                         ServerSentEvent.<String>builder()

@@ -1,4 +1,4 @@
-package com.zake.aicode.model.dto;
+package com.zake.aicode.model.dto.chatHistory;
 
 import com.zake.aicode.common.PageRequest;
 import lombok.Data;

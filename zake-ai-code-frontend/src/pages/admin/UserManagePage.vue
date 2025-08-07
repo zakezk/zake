@@ -206,7 +206,7 @@ import { ref, onMounted } from 'vue';
 import { listUserVoByPage, deleteUser as deleteUserApi, addUser as addUserApi, updateUser as updateUserApi } from '@/api/userController';
 
 interface User {
-  id?: number;
+  id?: string;
   userAccount?: string;
   userName?: string;
   userRole?: string;
@@ -238,7 +238,7 @@ const addUserForm = ref({
 
 // 编辑用户表单
 const editUserForm = ref({
-  id: 0,
+  id: '',
   userAccount: '',
   userName: '',
   userRole: 'user',

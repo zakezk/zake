@@ -8,7 +8,7 @@ import com.zake.aicode.common.ResultUtils;
 import com.zake.aicode.constant.UserConstant;
 import com.zake.aicode.exception.ErrorCode;
 import com.zake.aicode.exception.ThrowUtils;
-import com.zake.aicode.model.dto.ChatHistoryQueryRequest;
+import com.zake.aicode.model.dto.chatHistory.ChatHistoryQueryRequest;
 import com.zake.aicode.model.entity.User;
 import com.zake.aicode.service.UserService;
 import jakarta.annotation.Resource;
@@ -19,7 +19,6 @@ import com.zake.aicode.model.entity.ChatHistory;
 import com.zake.aicode.service.ChatHistoryService;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 /**
  * 对话历史 控制层。

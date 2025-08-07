@@ -129,6 +129,7 @@ const menuItems = computed(() => {
   if (isAdmin.value) {
     items.push({ key: '/admin/user', label: '用户管理' })
     items.push({ key: '/admin/app', label: '应用管理' })
+    items.push({ key: '/admin/chat', label: '对话管理' })
   }
   
   return items

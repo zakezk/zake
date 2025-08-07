@@ -20,36 +20,13 @@ export async function chatToGenCode(
   params: API.chatToGenCodeParams,
   options?: { [key: string]: any }
 ) {
-  // SSE接口需要使用特殊的处理方式
-  const queryString = new URLSearchParams(params as any).toString();
-  const url = `/app/chat/gen/code?${queryString}`;
-  
-  return new Promise((resolve, reject) => {
-    const eventSource = new EventSource(url, { withCredentials: true });
-    
-    const messages: string[] = [];
-    
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.d) {
-          messages.push(data.d);
-        }
-      } catch (error) {
-        console.error('解析SSE消息失败:', error);
-      }
-    };
-    
-    eventSource.onerror = (error) => {
-      eventSource.close();
-      reject(error);
-    };
-    
-    eventSource.addEventListener('done', () => {
-      eventSource.close();
-      resolve(messages);
-    });
-  });
+  return request<API.ServerSentEventString[]>('/app/chat/gen/code', {
+    method: 'GET',
+    params: {
+      ...params,
+    },
+    ...(options || {}),
+  })
 }
 
 /** 此处后端没有提供注释 POST /app/delete */
@@ -158,7 +135,7 @@ export async function listAppByPage(body: API.AppQueryRequest, options?: { [key:
 }
 
 /** 此处后端没有提供注释 POST /app/update */
-export async function updateApp(body: API.AppUpdateRequest, options?: { [key: string]: any }) {
+export async function updateApp(body: API.AppAdminUpdateRequest, options?: { [key: string]: any }) {
   return request<API.BaseResponseBoolean>('/app/update', {
     method: 'POST',
     headers: {
