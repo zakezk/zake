@@ -12,9 +12,12 @@ import dev.langchain4j.data.message.ToolExecutionResultMessage;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.StreamingChatModel;
+import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
 import dev.langchain4j.service.AiServices;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -35,7 +38,7 @@ public class AiCodeGeneratorServiceFactory {
 
     //流式输出
     @Resource
-    private StreamingChatModel openAiStreamingChatModel;
+    private dev.langchain4j.model.openai.OpenAiStreamingChatModel openAiStreamingChatModel;
 
     //聊天记录存储 实现会话隔离
     @Resource
@@ -46,7 +49,7 @@ public class AiCodeGeneratorServiceFactory {
     private ChatHistoryService chatHistoryService;
 
     @Resource
-    private dev.langchain4j.model.chat.StreamingChatModel reasoningStreamingChatModel;
+    private StreamingChatModel reasoningStreamingChatModel;
     /**
      * 默认提供一个 Bean
      */
