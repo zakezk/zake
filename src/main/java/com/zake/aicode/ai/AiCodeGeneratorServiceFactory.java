@@ -12,11 +12,9 @@ import dev.langchain4j.data.message.ToolExecutionResultMessage;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.StreamingChatModel;
-import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
 import dev.langchain4j.service.AiServices;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -36,9 +34,9 @@ public class AiCodeGeneratorServiceFactory {
     @Resource
     private ChatModel chatModel;
 
-    //流式输出
+    //流式输出 - 使用默认的OpenAI流式模型（由Spring Boot自动配置创建）
     @Resource
-    private dev.langchain4j.model.openai.OpenAiStreamingChatModel openAiStreamingChatModel;
+    private StreamingChatModel openAiStreamingChatModel;
 
     //聊天记录存储 实现会话隔离
     @Resource
@@ -48,8 +46,10 @@ public class AiCodeGeneratorServiceFactory {
     @Resource
     private ChatHistoryService chatHistoryService;
 
+    //推理流式模型（用于 Vue 项目生成，带工具调用）
     @Resource
     private StreamingChatModel reasoningStreamingChatModel;
+    
     /**
      * 默认提供一个 Bean
      */
@@ -93,6 +93,7 @@ public class AiCodeGeneratorServiceFactory {
     public AiCodeGeneratorService getAiCodeGeneratorService(long appId) {
         return getAiCodeGeneratorService(appId, CodeGenTypeEnum.HTML);
     }
+    
     /**
      * 根据 appId 和代码生成类型获取服务（带缓存）
      */
@@ -100,6 +101,7 @@ public class AiCodeGeneratorServiceFactory {
         String cacheKey = buildCacheKey(appId, codeGenType);
         return serviceCache.get(cacheKey, key -> createAiCodeGeneratorService(appId, codeGenType));
     }
+    
     /**
      * 构建缓存键
      */
