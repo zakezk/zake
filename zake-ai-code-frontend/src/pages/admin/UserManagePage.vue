@@ -12,7 +12,12 @@
     </div>
 
     <div class="search-bar">
-      <input type="text" v-model="searchKeyword" placeholder="搜索用户名..." @keyup.enter="fetchUsers">
+      <input
+        type="text"
+        v-model="searchKeyword"
+        placeholder="搜索用户名..."
+        @keyup.enter="fetchUsers"
+      />
       <button @click="fetchUsers" class="search-btn">搜索</button>
       <button @click="resetSearch" class="reset-btn">重置</button>
     </div>
@@ -40,14 +45,12 @@
             </td>
           </tr>
           <tr v-else-if="users.length === 0" class="empty-row">
-            <td colspan="9" class="empty-cell">
-              暂无用户数据
-            </td>
+            <td colspan="9" class="empty-cell">暂无用户数据</td>
           </tr>
           <tr v-else v-for="user in users" :key="user.id">
             <td>{{ user.id }}</td>
             <td class="avatar-cell">
-              <img :src="getUserAvatar(user.userAvatar)" :alt="user.userName" class="user-avatar">
+              <img :src="getUserAvatar(user.userAvatar)" :alt="user.userName" class="user-avatar" />
             </td>
             <td>{{ user.userAccount }}</td>
             <td>{{ user.userName || '-' }}</td>
@@ -60,7 +63,7 @@
               <span :class="getRoleClass(user.userRole)">{{ getRoleText(user.userRole) }}</span>
             </td>
             <td>{{ formatDate(user.createTime) }}</td>
-            <td>{{ formatDate(user.updateTime) }}</td>
+            <td>{{ formatDate(user.createTime) }}</td>
             <td class="action-buttons">
               <button @click="editUser(user)" class="edit-btn" title="编辑">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -71,7 +74,9 @@
               <button @click="deleteUser(user.id)" class="delete-btn" title="删除">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="3,6 5,6 21,6"></polyline>
-                  <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2V6"></path>
+                  <path
+                    d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2V6"
+                  ></path>
                 </svg>
               </button>
             </td>
@@ -84,22 +89,22 @@
       <div class="pagination-info">
         <span class="total-count">共 {{ totalCount || 0 }} 条</span>
       </div>
-      
+
       <div class="pagination-controls">
-        <button 
-          @click="changePage(currentPage - 1)" 
+        <button
+          @click="changePage(currentPage - 1)"
           :disabled="currentPage === 1"
           class="page-btn"
           :class="{ disabled: currentPage === 1 }"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M15 18l-6-6 6-6"/>
+            <path d="M15 18l-6-6 6-6" />
           </svg>
         </button>
-        
+
         <div class="page-numbers">
-          <button 
-            v-for="page in visiblePages" 
+          <button
+            v-for="page in visiblePages"
             :key="page"
             @click="changePage(page)"
             class="page-btn"
@@ -108,19 +113,19 @@
             {{ page }}
           </button>
         </div>
-        
-        <button 
-          @click="changePage(currentPage + 1)" 
+
+        <button
+          @click="changePage(currentPage + 1)"
           :disabled="currentPage === totalPages"
           class="page-btn"
           :class="{ disabled: currentPage === totalPages }"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M9 18l6-6-6-6"/>
+            <path d="M9 18l6-6-6-6" />
           </svg>
         </button>
       </div>
-      
+
       <div class="page-size-selector">
         <select v-model="pageSize" @change="changePageSize" class="page-size-select">
           <option value="5">5 / page</option>
@@ -138,15 +143,15 @@
         <form @submit.prevent="addUser">
           <div class="form-group">
             <label>用户名</label>
-            <input v-model="addUserForm.userAccount" type="text" required>
+            <input v-model="addUserForm.userAccount" type="text" required />
           </div>
           <div class="form-group">
             <label>昵称</label>
-            <input v-model="addUserForm.userName" type="text">
+            <input v-model="addUserForm.userName" type="text" />
           </div>
           <div class="form-group">
             <label>密码</label>
-            <input v-model="addUserForm.userPassword" type="password" required>
+            <input v-model="addUserForm.userPassword" type="password" required />
           </div>
           <div class="form-group">
             <label>角色</label>
@@ -170,11 +175,11 @@
         <form @submit.prevent="updateUser">
           <div class="form-group">
             <label>用户名</label>
-            <input v-model="editUserForm.userAccount" type="text" disabled>
+            <input v-model="editUserForm.userAccount" type="text" disabled />
           </div>
           <div class="form-group">
             <label>昵称</label>
-            <input v-model="editUserForm.userName" type="text">
+            <input v-model="editUserForm.userName" type="text" />
           </div>
           <div class="form-group">
             <label>角色</label>
@@ -188,7 +193,9 @@
             <textarea v-model="editUserForm.userProfile" rows="3"></textarea>
           </div>
           <div class="modal-actions">
-            <button type="button" @click="showEditUserModal = false" class="cancel-btn">取消</button>
+            <button type="button" @click="showEditUserModal = false" class="cancel-btn">
+              取消
+            </button>
             <button type="submit" class="submit-btn">保存</button>
           </div>
         </form>
@@ -202,8 +209,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { listUserVoByPage, deleteUser as deleteUserApi, addUser as addUserApi, updateUser as updateUserApi } from '@/api/userController';
+import { ref, onMounted } from 'vue'
+import {
+  listUserVoByPage,
+  deleteUser as deleteUserApi,
+  addUser as addUserApi,
+  updateUser as updateUserApi,
+} from '@/api/userController'
 
 interface User {
   id?: string;
@@ -217,7 +229,7 @@ interface User {
   updateTime?: string;
 }
 
-const users = ref<User[]>([]);
+const users = ref<API.UserVO[]>([]);
 const searchKeyword = ref('');
 const currentPage = ref(1);
 const totalPages = ref(1);
@@ -245,137 +257,133 @@ const editUserForm = ref({
   userProfile: ''
 });
 
-import { computed } from 'vue';
+import { computed } from 'vue'
 
-const showMessage = (msg: string, type: 'success' | 'error' = 'success') => {
-  message.value = msg;
+const showMessage = (msg: string) => {
+  message.value = msg
   setTimeout(() => {
-    message.value = '';
-  }, 3000);
-};
+    message.value = ''
+  }, 3000)
+}
 
 // 计算可见的页码
 const visiblePages = computed(() => {
-  const pages = [];
-  const maxVisible = 5;
-  let start = Math.max(1, currentPage.value - Math.floor(maxVisible / 2));
-  let end = Math.min(totalPages.value, start + maxVisible - 1);
-  
-  if (end - start + 1 < maxVisible) {
-    start = Math.max(1, end - maxVisible + 1);
-  }
-  
+  const pages = []
+  const maxVisible = 5
+  const start = Math.max(1, currentPage.value - Math.floor(maxVisible / 2))
+  const end = Math.min(totalPages.value, start + maxVisible - 1)
+
   for (let i = start; i <= end; i++) {
-    pages.push(i);
+    pages.push(i)
   }
-  return pages;
-});
+  return pages
+})
 
 const fetchUsers = async () => {
-  loading.value = true;
+  loading.value = true
   try {
     const response = await listUserVoByPage({
       pageNum: currentPage.value,
       pageSize: pageSize.value,
-      userAccount: searchKeyword.value || undefined
-    });
+      userAccount: searchKeyword.value || undefined,
+    })
     if (response.data && response.data.data) {
-      users.value = response.data.data.records || [];
-      totalPages.value = response.data.data.totalPage || 1;
-      totalCount.value = response.data.data.totalRow || 0;
+      users.value = response.data.data.records || []
+      totalPages.value = response.data.data.totalPage || 1
+      totalCount.value = response.data.data.totalRow || 0
     }
   } catch (error) {
-    console.error('获取用户列表失败:', error);
-    showMessage('获取用户列表失败', 'error');
+    console.error('获取用户列表失败:', error)
+    showMessage('获取用户列表失败')
   } finally {
-    loading.value = false;
+    loading.value = false
   }
-};
+}
 
 const resetSearch = () => {
-  searchKeyword.value = '';
-  currentPage.value = 1;
-  fetchUsers();
-};
+  searchKeyword.value = ''
+  currentPage.value = 1
+  fetchUsers()
+}
 
 const editUser = (user: User) => {
   editUserForm.value = {
-    id: user.id || 0,
+    id: user.id || '',
     userAccount: user.userAccount || '',
     userName: user.userName || '',
     userRole: user.userRole || 'user',
-    userProfile: user.userProfile || ''
-  };
-  showEditUserModal.value = true;
-};
+    userProfile: user.userProfile || '',
+  }
+  showEditUserModal.value = true
+}
 
-const deleteUser = async (id: number | undefined) => {
-  if (!id) return;
-  
+const deleteUser = async (id: string | undefined) => {
+  if (!id) return
+
   if (confirm('确定要删除此用户吗?')) {
     try {
-      await deleteUserApi({ id });
-      showMessage('用户删除成功');
-      fetchUsers();
+      await deleteUserApi({ id })
+      showMessage('用户删除成功')
+      fetchUsers()
     } catch (error) {
-      console.error('删除用户失败:', error);
-      showMessage('删除用户失败', 'error');
+      console.error('删除用户失败:', error)
+      showMessage('删除用户失败')
     }
   }
-};
+}
 
 const addUser = async () => {
   try {
-    await addUserApi(addUserForm.value);
-    showAddUserModal.value = false;
-    showMessage('用户添加成功');
+    await addUserApi(addUserForm.value)
+    showAddUserModal.value = false
+    showMessage('用户添加成功')
     // 重置表单
     addUserForm.value = {
       userAccount: '',
       userName: '',
       userPassword: '',
-      userRole: 'user'
-    };
-    fetchUsers();
+      userRole: 'user',
+    }
+    fetchUsers()
   } catch (error) {
-    console.error('添加用户失败:', error);
-    showMessage('添加用户失败', 'error');
+    console.error('添加用户失败:', error)
+    showMessage('添加用户失败')
   }
-};
+}
 
 const updateUser = async () => {
   try {
-    await updateUserApi(editUserForm.value);
-    showEditUserModal.value = false;
-    showMessage('用户信息更新成功');
-    fetchUsers();
+    await updateUserApi(editUserForm.value)
+    showEditUserModal.value = false
+    showMessage('用户信息更新成功')
+    fetchUsers()
   } catch (error) {
-    console.error('更新用户失败:', error);
-    showMessage('更新用户失败', 'error');
+    console.error('更新用户失败:', error)
+    showMessage('更新用户失败')
   }
-};
+}
 
 const changePage = (page: number) => {
-  currentPage.value = page;
-  fetchUsers();
-};
+  currentPage.value = page
+  fetchUsers()
+}
 
 const changePageSize = () => {
-  currentPage.value = 1; // 重置到第一页
-  fetchUsers();
-};
+  currentPage.value = 1 // 重置到第一页
+  fetchUsers()
+}
 
 const getRoleClass = (role?: string) => {
-  return role === 'admin' ? 'role-admin' : 'role-user';
-};
+  return role === 'admin' ? 'role-admin' : 'role-user'
+}
 
 const getRoleText = (role?: string) => {
-  return role === 'admin' ? '管理员' : '普通用户';
-};
+  return role === 'admin' ? '管理员' : '普通用户'
+}
 
 const formatDate = (dateString?: string) => {
-  if (!dateString) return '-';
-  const date = new Date(dateString);
+  if (!dateString) return '-'
+  const date = new Date(dateString)
   return date.toLocaleString('zh-CN', {
     year: 'numeric',
     month: '2-digit',
@@ -383,17 +391,17 @@ const formatDate = (dateString?: string) => {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
-    hour12: false
-  });
-};
+    hour12: false,
+  })
+}
 
 function getUserAvatar(avatar?: string) {
-  return avatar && avatar.trim() !== '' ? avatar : '/default-avatar.svg';
+  return avatar && avatar.trim() !== '' ? avatar : '/default-avatar.svg'
 }
 
 onMounted(() => {
-  fetchUsers();
-});
+  fetchUsers()
+})
 </script>
 
 <style scoped>
@@ -508,7 +516,8 @@ onMounted(() => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.user-table th, .user-table td {
+.user-table th,
+.user-table td {
   padding: 12px 16px;
   text-align: left;
   border-bottom: 1px solid #f0f0f0;
@@ -798,8 +807,12 @@ onMounted(() => {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .empty-row {
@@ -812,7 +825,8 @@ onMounted(() => {
   font-style: italic;
 }
 
-.edit-btn, .delete-btn {
+.edit-btn,
+.delete-btn {
   padding: 6px;
   border-radius: 6px;
   cursor: pointer;
@@ -824,7 +838,8 @@ onMounted(() => {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.edit-btn svg, .delete-btn svg {
+.edit-btn svg,
+.delete-btn svg {
   width: 14px;
   height: 14px;
   stroke-width: 2;

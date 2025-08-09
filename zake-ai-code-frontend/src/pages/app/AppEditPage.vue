@@ -12,11 +12,11 @@ const loginUserStore = useLoginUserStore()
 const appInfo = ref<API.AppVO | null>(null)
 const loading = ref(true)
 
-// 表单数据
+// 编辑表单
 const form = ref({
-  id: 0,
+  id: '',
   appName: '',
-  cover: ''
+  cover: '',
 })
 
 // 提交状态
@@ -38,7 +38,7 @@ onMounted(async () => {
     router.push('/user/login')
     return
   }
-  
+
   await loadAppInfo()
 })
 
@@ -47,22 +47,22 @@ const loadAppInfo = async () => {
   try {
     loading.value = true
     const response = await getAppVoById({ id: appId.value })
-    
-    if (response.data.code === 0) {
+
+    if (response.data.code === 0 && response.data.data) {
       appInfo.value = response.data.data
-      
+
       // 检查权限
       if (!isAdmin.value && !isOwner.value) {
         alert('您没有权限编辑此应用')
         router.push('/')
         return
       }
-      
+
       // 填充表单
       form.value = {
-        id: appInfo.value.id || 0,
-        appName: appInfo.value.appName || '',
-        cover: appInfo.value.cover || ''
+        id: appInfo.value?.id || '',
+        appName: appInfo.value?.appName || '',
+        cover: appInfo.value?.cover || '',
       }
     } else {
       throw new Error(response.data.message || '加载应用信息失败')
@@ -82,13 +82,13 @@ const handleSave = async () => {
     alert('请输入应用名称')
     return
   }
-  
+
   submitting.value = true
   try {
     // 根据用户角色调用不同的API
     const updateFunction = isAdmin.value ? updateApp : updateMyApp
     const response = await updateFunction(form.value)
-    
+
     if (response.data.code === 0) {
       alert('保存成功')
       router.push(`/app/chat/${appId.value}`)
@@ -145,15 +145,17 @@ const previewApp = () => {
         </div>
         <div class="preview-content">
           <div class="app-card">
-            <img 
-              :src="appInfo.cover || '/default-app-cover.png'" 
+            <img
+              :src="appInfo.cover || '/default-app-cover.png'"
               :alt="appInfo.appName"
               class="app-cover"
             />
             <div class="app-info">
               <h4 class="app-name">{{ appInfo.appName }}</h4>
               <p class="app-creator">创建者: {{ appInfo.user?.userName || '未知用户' }}</p>
-              <p class="app-time">创建时间: {{ new Date(appInfo.createTime || '').toLocaleString('zh-CN') }}</p>
+              <p class="app-time">
+                创建时间: {{ new Date(appInfo.createTime || '').toLocaleString('zh-CN') }}
+              </p>
             </div>
           </div>
         </div>
@@ -167,7 +169,7 @@ const previewApp = () => {
         <div class="form-content">
           <div class="form-item">
             <label>应用名称 *</label>
-            <input 
+            <input
               v-model="form.appName"
               placeholder="请输入应用名称"
               class="form-input"
@@ -175,30 +177,22 @@ const previewApp = () => {
             />
             <div class="form-tip">应用名称不能超过50个字符</div>
           </div>
-          
+
           <div class="form-item">
             <label>应用封面</label>
-            <input 
-              v-model="form.cover"
-              placeholder="请输入封面图片URL"
-              class="form-input"
-            />
+            <input v-model="form.cover" placeholder="请输入封面图片URL" class="form-input" />
             <div class="form-tip">支持图片URL链接，建议尺寸 300x200</div>
           </div>
-          
+
           <div class="form-item">
             <label>代码类型</label>
-            <input 
-              :value="appInfo.codeGenType || '-'"
-              class="form-input"
-              disabled
-            />
+            <input :value="appInfo.codeGenType || '-'" class="form-input" disabled />
             <div class="form-tip">代码类型不可修改</div>
           </div>
-          
+
           <div class="form-item">
             <label>初始提示词</label>
-            <textarea 
+            <textarea
               :value="appInfo.initPrompt || ''"
               class="form-textarea"
               disabled
@@ -211,20 +205,10 @@ const previewApp = () => {
 
       <!-- 操作按钮 -->
       <div class="form-actions">
-        <button @click="handleCancel" class="cancel-btn">
-          取消
-        </button>
-        <button @click="previewApp" class="preview-btn">
-          预览应用
-        </button>
-        <button @click="router.push(`/app/chat/${appId}`)" class="chat-btn">
-          返回对话
-        </button>
-        <button 
-          @click="handleSave"
-          :disabled="submitting || !form.appName.trim()"
-          class="save-btn"
-        >
+        <button @click="handleCancel" class="cancel-btn">取消</button>
+        <button @click="previewApp" class="preview-btn">预览应用</button>
+        <button @click="router.push(`/app/chat/${appId}`)" class="chat-btn">返回对话</button>
+        <button @click="handleSave" :disabled="submitting || !form.appName.trim()" class="save-btn">
           {{ submitting ? '保存中...' : '保存修改' }}
         </button>
       </div>
@@ -234,9 +218,7 @@ const previewApp = () => {
       <div class="error-icon">⚠️</div>
       <h3>应用不存在</h3>
       <p>您要编辑的应用不存在或已被删除</p>
-      <button @click="router.push('/')" class="back-btn">
-        返回首页
-      </button>
+      <button @click="router.push('/')" class="back-btn">返回首页</button>
     </div>
   </div>
 </template>
@@ -294,7 +276,8 @@ const previewApp = () => {
   height: 16px;
 }
 
-.loading-state, .error-state {
+.loading-state,
+.error-state {
   text-align: center;
   padding: 60px 24px;
   background: white;
@@ -313,8 +296,12 @@ const previewApp = () => {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .error-icon {
@@ -403,7 +390,8 @@ const previewApp = () => {
   font-weight: 600;
 }
 
-.app-creator, .app-time {
+.app-creator,
+.app-time {
   margin: 0 0 4px 0;
   font-size: 12px;
   color: #666;
@@ -447,7 +435,8 @@ const previewApp = () => {
   font-weight: 500;
 }
 
-.form-input, .form-textarea {
+.form-input,
+.form-textarea {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid #d9d9d9;
@@ -458,11 +447,13 @@ const previewApp = () => {
   box-sizing: border-box;
 }
 
-.form-input:focus, .form-textarea:focus {
+.form-input:focus,
+.form-textarea:focus {
   border-color: #1890ff;
 }
 
-.form-input:disabled, .form-textarea:disabled {
+.form-input:disabled,
+.form-textarea:disabled {
   background: #f5f5f5;
   color: #999;
   cursor: not-allowed;
@@ -490,7 +481,9 @@ const previewApp = () => {
   border-radius: 8px;
 }
 
-.cancel-btn, .preview-btn, .save-btn {
+.cancel-btn,
+.preview-btn,
+.save-btn {
   padding: 10px 20px;
   border: none;
   border-radius: 6px;
@@ -545,13 +538,15 @@ const previewApp = () => {
   .edit-form {
     grid-template-columns: 1fr;
   }
-  
+
   .form-actions {
     flex-direction: column;
   }
-  
-  .cancel-btn, .preview-btn, .save-btn {
+
+  .cancel-btn,
+  .preview-btn,
+  .save-btn {
     width: 100%;
   }
 }
-</style> 
+</style>

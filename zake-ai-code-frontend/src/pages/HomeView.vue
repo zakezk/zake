@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, reactive } from 'vue'
-import { useLoginUserStore } from '@/stores/loginUser'
+import { computed, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useLoginUserStore } from '@/stores/loginUser'
 import { createApp, listMyAppByPage, listFeaturedAppByPage, deleteMyApp } from '@/api/appController'
 
 const loginUserStore = useLoginUserStore()
@@ -38,9 +38,34 @@ const userName = computed(() => {
   return loginUserStore.loginUser.userAccount || loginUserStore.loginUser.userName || '用户'
 })
 
-const userRole = computed(() => {
-  return loginUserStore.loginUser.userRole || '普通用户'
-})
+// 设置用户提示词
+const setUserPrompt = (prompt: string) => {
+  userPrompt.value = prompt
+}
+
+// 处理我的应用上一页
+const handleMyAppsPrevPage = () => {
+  myAppsCurrentPage.value--
+  loadMyApps()
+}
+
+// 处理我的应用下一页
+const handleMyAppsNextPage = () => {
+  myAppsCurrentPage.value++
+  loadMyApps()
+}
+
+// 处理精选应用上一页
+const handleFeaturedAppsPrevPage = () => {
+  featuredAppsCurrentPage.value--
+  loadFeaturedApps()
+}
+
+// 处理精选应用下一页
+const handleFeaturedAppsNextPage = () => {
+  featuredAppsCurrentPage.value++
+  loadFeaturedApps()
+}
 
 // 检查是否从登录页面跳转过来
 onMounted(() => {
@@ -52,7 +77,7 @@ onMounted(() => {
       showLoginSuccess.value = false
     }, 500)
   }
-  
+
   // 加载应用列表
   loadMyApps()
   loadFeaturedApps()
@@ -64,18 +89,18 @@ const handleCreateApp = async () => {
     alert('请输入应用描述')
     return
   }
-  
+
   if (!isLoggedIn.value) {
     alert('请先登录')
     return
   }
-  
+
   isCreating.value = true
   try {
     const response = await createApp({
-      initPrompt: userPrompt.value
+      initPrompt: userPrompt.value,
     })
-    
+
     if (response.data.code === 0) {
       const appId = response.data.data
       // 跳转到对话页面，并传递prompt
@@ -94,18 +119,18 @@ const handleCreateApp = async () => {
 // 加载我的应用列表
 const loadMyApps = async () => {
   if (!isLoggedIn.value) return
-  
+
   myAppsLoading.value = true
   try {
     const response = await listMyAppByPage({
       pageNum: myAppsCurrentPage.value,
       pageSize: myAppsPageSize.value,
-      appName: myAppsSearchName.value || undefined
+      appName: myAppsSearchName.value || undefined,
     })
-    
+
     if (response.data.code === 0) {
-      myApps.value = response.data.data.records || []
-      myAppsTotal.value = response.data.data.totalRow || 0
+      myApps.value = response.data.data?.records || []
+      myAppsTotal.value = response.data.data?.totalRow || 0
     }
   } catch (error) {
     console.error('加载我的应用失败:', error)
@@ -121,12 +146,12 @@ const loadFeaturedApps = async () => {
     const response = await listFeaturedAppByPage({
       pageNum: featuredAppsCurrentPage.value,
       pageSize: featuredAppsPageSize.value,
-      appName: featuredAppsSearchName.value || undefined
+      appName: featuredAppsSearchName.value || undefined,
     })
-    
+
     if (response.data.code === 0) {
-      featuredApps.value = response.data.data.records || []
-      featuredAppsTotal.value = response.data.data.totalRow || 0
+      featuredApps.value = response.data.data?.records || []
+      featuredAppsTotal.value = response.data.data?.totalRow || 0
     }
   } catch (error) {
     console.error('加载精选应用失败:', error)
@@ -153,11 +178,11 @@ const formatTime = (timeStr: string) => {
   const date = new Date(timeStr)
   const now = new Date()
   const diff = now.getTime() - date.getTime()
-  
+
   const minutes = Math.floor(diff / (1000 * 60))
   const hours = Math.floor(diff / (1000 * 60 * 60))
   const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-  
+
   if (minutes < 60) {
     return `${minutes}分钟前`
   } else if (hours < 24) {
@@ -167,21 +192,15 @@ const formatTime = (timeStr: string) => {
   }
 }
 
-// 获取应用预览URL
-const getAppPreviewUrl = (app: API.AppVO) => {
-  if (!app.codeGenType || !app.id) return ''
-  return `http://localhost:8123/api/static/${app.codeGenType}_${app.id}/`
-}
-
 // 删除我的应用
 const handleDeleteMyApp = async (app: API.AppVO) => {
   if (!confirm(`确定要删除应用 "${app.appName}" 吗？`)) {
     return
   }
-  
+
   try {
     const response = await deleteMyApp({ id: app.id })
-    
+
     if (response.data.code === 0) {
       alert('删除成功')
       loadMyApps()
@@ -202,13 +221,13 @@ const formatDate = (dateString: string) => {
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
   })
 }
 
 // 显示作品悬浮提示
-const showAppTooltip = (appId: string) => {
-  hoveredAppId.value = appId
+const showAppTooltip = (appId: string | undefined) => {
+  hoveredAppId.value = appId || null
 }
 
 // 隐藏作品悬浮提示
@@ -219,7 +238,9 @@ const hideAppTooltip = () => {
 // 预览作品
 const previewApp = (app: API.AppVO) => {
   if (app.codeGenType && app.id) {
-    const previewUrl = `http://localhost:8123/api/static/${app.codeGenType}_${app.id}/`
+    // 如果是 Vue 项目，浏览地址需要添加 dist/index.html 后缀
+    const suffix = app.codeGenType === 'vue_project' ? '/dist/index.html' : ''
+    const previewUrl = `http://localhost:8123/api/static/${app.codeGenType}_${app.id}${suffix}`
     window.open(previewUrl, '_blank')
   } else {
     alert('该作品暂无可预览的内容')
@@ -253,11 +274,16 @@ const previewApp = (app: API.AppVO) => {
           <div class="left-actions">
             <button @click="userPrompt = '请根据我上传的文件内容来生成应用'" class="action-btn">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+                <path
+                  d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"
+                ></path>
               </svg>
               上传
             </button>
-            <button @click="userPrompt = '请优化我的应用需求描述，使其更加详细和具体'" class="action-btn">
+            <button
+              @click="userPrompt = '请优化我的应用需求描述，使其更加详细和具体'"
+              class="action-btn"
+            >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="5"></circle>
                 <line x1="12" y1="1" x2="12" y2="3"></line>
@@ -272,7 +298,7 @@ const previewApp = (app: API.AppVO) => {
               优化
             </button>
           </div>
-          <button 
+          <button
             @click="handleCreateApp"
             :disabled="isCreating || !userPrompt.trim()"
             class="create-btn"
@@ -289,10 +315,38 @@ const previewApp = (app: API.AppVO) => {
     <!-- 建议分类 -->
     <div class="categories-section">
       <div class="category-buttons">
-        <button @click="userPrompt = '创建一个波普风格的电商页面，包含商品展示、购物车、用户登录等功能'" class="category-btn">波普风电商页面</button>
-        <button @click="userPrompt = '创建一个企业官网，包含公司介绍、产品服务、团队介绍、联系方式等页面'" class="category-btn">企业网站</button>
-        <button @click="userPrompt = '创建一个电商运营后台管理系统，包含订单管理、商品管理、用户管理、数据统计等功能'" class="category-btn">电商运营后台</button>
-        <button @click="userPrompt = '创建一个暗黑风格的话题社区，用户可以发布帖子、评论、点赞，支持话题分类'" class="category-btn">暗黑话题社区</button>
+        <button
+          @click="setUserPrompt('创建一个波普风格的电商页面，包含商品展示、购物车、用户登录等功能')"
+          class="category-btn"
+        >
+          波普风电商页面
+        </button>
+        <button
+          @click="
+            setUserPrompt('创建一个企业官网，包含公司介绍、产品服务、团队介绍、联系方式等页面')
+          "
+          class="category-btn"
+        >
+          企业网站
+        </button>
+        <button
+          @click="
+            setUserPrompt(
+              '创建一个电商运营后台管理系统，包含订单管理、商品管理、用户管理、数据统计等功能',
+            )
+          "
+          class="category-btn"
+        >
+          电商运营后台
+        </button>
+        <button
+          @click="
+            setUserPrompt('创建一个暗黑风格的话题社区，用户可以发布帖子、评论、点赞，支持话题分类')
+          "
+          class="category-btn"
+        >
+          暗黑话题社区
+        </button>
       </div>
     </div>
 
@@ -315,81 +369,76 @@ const previewApp = (app: API.AppVO) => {
           </button>
         </div>
       </div>
-      
+
       <div class="apps-grid" v-if="!myAppsLoading">
-        <div 
-          v-for="app in myApps" 
+        <div
+          v-for="app in myApps"
           :key="app.id"
           class="app-card"
           @mouseenter="showAppTooltip(app.id)"
           @mouseleave="hideAppTooltip()"
         >
-          <div class="app-preview" @click="router.push(`/app/chat/${app.id}`)">
-            <img 
-              :src="app.cover || '/default-app-cover.png'" 
-              :alt="app.appName"
+          <div class="app-preview" @click="router.push(`/app/chat/${app.id || ''}`)">
+            <img
+              :src="app.cover || '/default-app-cover.png'"
+              :alt="app.appName || ''"
               class="app-cover"
             />
           </div>
           <div class="app-info">
-            <h3 class="app-name" @click="router.push(`/app/chat/${app.id}`)">{{ app.appName }}</h3>
-            <p class="app-time">创建于{{ formatTime(app.createTime) }}</p>
+            <h3 class="app-name" @click="router.push(`/app/chat/${app.id || ''}`)">
+              {{ app.appName || '' }}
+            </h3>
+            <p class="app-time">创建于{{ formatTime(app.createTime || '') }}</p>
             <div class="app-actions">
-              <button @click="router.push(`/app/edit/${app.id}`)" class="action-btn edit-btn">
+              <button @click="router.push(`/app/edit/${app.id || ''}`)" class="action-btn edit-btn">
                 编辑
               </button>
-              <button @click="handleDeleteMyApp(app)" class="action-btn delete-btn">
-                删除
-              </button>
+              <button @click="handleDeleteMyApp(app)" class="action-btn delete-btn">删除</button>
             </div>
           </div>
-          
+
           <!-- 悬浮提示 -->
           <div v-if="hoveredAppId === app.id" class="app-tooltip">
             <div class="tooltip-content">
               <h4>作品详情</h4>
-              <p><strong>作品名称：</strong>{{ app.appName }}</p>
-              <p><strong>创建时间：</strong>{{ formatDate(app.createTime) }}</p>
+              <p><strong>作品名称：</strong>{{ app.appName || '' }}</p>
+              <p><strong>创建时间：</strong>{{ formatDate(app.createTime || '') }}</p>
               <p><strong>作品类型：</strong>{{ app.codeGenType || '未知' }}</p>
               <p><strong>状态：</strong>{{ app.deployKey ? '已部署' : '未部署' }}</p>
-              <div v-if="app.description" class="tooltip-description">
-                <strong>作品描述：</strong>
-                <p>{{ app.description }}</p>
-              </div>
               <div class="tooltip-actions">
-                <button @click="router.push(`/app/chat/${app.id}`)" class="tooltip-btn primary">
+                <button
+                  @click="router.push(`/app/chat/${app.id || ''}`)"
+                  class="tooltip-btn primary"
+                >
                   查看对话
                 </button>
-                <button @click="previewApp(app)" class="tooltip-btn secondary">
-                  预览作品
-                </button>
+                <button @click="previewApp(app)" class="tooltip-btn secondary">预览作品</button>
               </div>
             </div>
           </div>
         </div>
       </div>
-      
+
       <div class="loading-state" v-if="myAppsLoading">
         <div class="loading-spinner"></div>
         <p>加载中...</p>
       </div>
-      
+
       <div class="empty-state" v-if="!myAppsLoading && myApps.length === 0">
         <p>暂无应用，开始创建您的第一个应用吧！</p>
       </div>
-      
+
       <!-- 分页 -->
       <div class="pagination" v-if="myAppsTotal > 0">
-        <button 
-          @click="myAppsCurrentPage--; loadMyApps()"
-          :disabled="myAppsCurrentPage <= 1"
-          class="page-btn"
-        >
+        <button @click="handleMyAppsPrevPage" :disabled="myAppsCurrentPage <= 1" class="page-btn">
           上一页
         </button>
-        <span class="page-info">{{ myAppsCurrentPage }} / {{ Math.ceil(myAppsTotal / myAppsPageSize) }}</span>
-        <button 
-          @click="myAppsCurrentPage++; loadMyApps()"
+        <span class="page-info"
+          >{{ myAppsCurrentPage }} / {{ Math.ceil(myAppsTotal / myAppsPageSize) }}</span
+        >
+        <button
+          @click="handleMyAppsNextPage"
           :disabled="myAppsCurrentPage >= Math.ceil(myAppsTotal / myAppsPageSize)"
           class="page-btn"
         >
@@ -417,17 +466,17 @@ const previewApp = (app: API.AppVO) => {
           </button>
         </div>
       </div>
-      
+
       <div class="apps-grid" v-if="!featuredAppsLoading">
-        <div 
-          v-for="app in featuredApps" 
+        <div
+          v-for="app in featuredApps"
           :key="app.id"
           class="app-card"
           @click="router.push(`/app/chat/${app.id}`)"
         >
           <div class="app-preview">
-            <img 
-              :src="app.cover || '/default-app-cover.png'" 
+            <img
+              :src="app.cover || '/default-app-cover.png'"
               :alt="app.appName"
               class="app-cover"
             />
@@ -438,28 +487,31 @@ const previewApp = (app: API.AppVO) => {
           </div>
         </div>
       </div>
-      
+
       <div class="loading-state" v-if="featuredAppsLoading">
         <div class="loading-spinner"></div>
         <p>加载中...</p>
       </div>
-      
+
       <div class="empty-state" v-if="!featuredAppsLoading && featuredApps.length === 0">
         <p>暂无精选应用</p>
       </div>
-      
+
       <!-- 分页 -->
       <div class="pagination" v-if="featuredAppsTotal > 0">
-        <button 
-          @click="featuredAppsCurrentPage--; loadFeaturedApps()"
+        <button
+          @click="handleFeaturedAppsPrevPage"
           :disabled="featuredAppsCurrentPage <= 1"
           class="page-btn"
         >
           上一页
         </button>
-        <span class="page-info">{{ featuredAppsCurrentPage }} / {{ Math.ceil(featuredAppsTotal / featuredAppsPageSize) }}</span>
-        <button 
-          @click="featuredAppsCurrentPage++; loadFeaturedApps()"
+        <span class="page-info"
+          >{{ featuredAppsCurrentPage }} /
+          {{ Math.ceil(featuredAppsTotal / featuredAppsPageSize) }}</span
+        >
+        <button
+          @click="handleFeaturedAppsNextPage"
           :disabled="featuredAppsCurrentPage >= Math.ceil(featuredAppsTotal / featuredAppsPageSize)"
           class="page-btn"
         >
@@ -750,7 +802,8 @@ const previewApp = (app: API.AppVO) => {
   font-weight: 600;
 }
 
-.app-time, .app-creator {
+.app-time,
+.app-creator {
   font-size: 0.9rem;
   color: #666;
   margin: 0;
@@ -790,7 +843,8 @@ const previewApp = (app: API.AppVO) => {
 }
 
 /* 加载和空状态 */
-.loading-state, .empty-state {
+.loading-state,
+.empty-state {
   text-align: center;
   padding: 40px;
   color: #666;
@@ -807,8 +861,12 @@ const previewApp = (app: API.AppVO) => {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* 分页 */
@@ -895,8 +953,12 @@ const previewApp = (app: API.AppVO) => {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes slideIn {
@@ -1019,28 +1081,28 @@ const previewApp = (app: API.AppVO) => {
   .main-title {
     font-size: 2rem;
   }
-  
+
   .cat-icon {
     font-size: 1.8rem;
   }
-  
+
   .subtitle {
     font-size: 1rem;
   }
-  
+
   .apps-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .section-header {
     flex-direction: column;
     align-items: flex-start;
   }
-  
+
   .search-box {
     width: 100%;
   }
-  
+
   .search-input {
     flex: 1;
     min-width: auto;

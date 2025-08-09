@@ -52,7 +52,7 @@ const loadChats = async () => {
       lastCreateTime: searchForm.value.lastCreateTime || undefined
     })
     
-    if (response.data.code === 0) {
+    if (response.data.code === 0 && response.data.data) {
       chats.value = response.data.data.records || []
       total.value = response.data.data.totalRow || 0
     } else {

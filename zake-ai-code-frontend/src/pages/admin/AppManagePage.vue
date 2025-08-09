@@ -2,11 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useLoginUserStore } from '@/stores/loginUser'
-import { 
-  listAppByPage, 
-  deleteApp, 
-  updateApp 
-} from '@/api/appController'
+import { listAppByPage, deleteApp, updateApp } from '@/api/appController'
 
 const router = useRouter()
 const loginUserStore = useLoginUserStore()
@@ -23,20 +19,19 @@ const searchForm = ref({
   appName: '',
   codeGenType: '',
   userId: '',
-  priority: ''
+  priority: '',
 })
 
-// 编辑对话框
+// 编辑相关
 const editDialogVisible = ref(false)
 const editForm = ref({
-  id: 0,
+  id: '',
   appName: '',
   cover: '',
-  priority: 0
+  priority: 0,
 })
-const editingApp = ref<API.AppVO | null>(null)
 
-// 删除确认
+// 删除相关
 const deleteDialogVisible = ref(false)
 const deletingApp = ref<API.AppVO | null>(null)
 
@@ -63,10 +58,10 @@ const loadApps = async () => {
       appName: searchForm.value.appName || undefined,
       codeGenType: searchForm.value.codeGenType || undefined,
       userId: searchForm.value.userId || undefined,
-      priority: searchForm.value.priority ? Number(searchForm.value.priority) : undefined
+      priority: searchForm.value.priority ? Number(searchForm.value.priority) : undefined,
     })
-    
-    if (response.data.code === 0) {
+
+    if (response.data.code === 0 && response.data.data) {
       apps.value = response.data.data.records || []
       total.value = response.data.data.totalRow || 0
     } else {
@@ -92,7 +87,7 @@ const resetSearch = () => {
     appName: '',
     codeGenType: '',
     userId: '',
-    priority: ''
+    priority: '',
   }
   currentPage.value = 1
   loadApps()
@@ -100,26 +95,23 @@ const resetSearch = () => {
 
 // 编辑应用
 const handleEdit = (app: API.AppVO) => {
-  editingApp.value = app
   editForm.value = {
     id: app.id || '',
     appName: app.appName || '',
     cover: app.cover || '',
-    priority: app.priority || 0
+    priority: app.priority || 0,
   }
   editDialogVisible.value = true
-}
-
-// 跳转到编辑页面
-const goToEdit = (app: API.AppVO) => {
-  router.push(`/app/edit/${app.id}`)
 }
 
 // 保存编辑
 const saveEdit = async () => {
   try {
-    const response = await updateApp(editForm.value)
-    
+    const response = await updateApp({
+      ...editForm.value,
+      id: editForm.value.id,
+    })
+
     if (response.data.code === 0) {
       alert('更新成功')
       editDialogVisible.value = false
@@ -142,10 +134,10 @@ const handleDelete = (app: API.AppVO) => {
 // 确认删除
 const confirmDelete = async () => {
   if (!deletingApp.value?.id) return
-  
+
   try {
     const response = await deleteApp({ id: deletingApp.value.id })
-    
+
     if (response.data.code === 0) {
       alert('删除成功')
       deleteDialogVisible.value = false
@@ -165,9 +157,9 @@ const setFeatured = async (app: API.AppVO) => {
     const response = await updateApp({
       id: app.id,
       appName: app.appName,
-      priority: 99
+      priority: 99,
     })
-    
+
     if (response.data.code === 0) {
       alert('设置精选成功')
       loadApps()
@@ -192,10 +184,16 @@ const formatTime = (timeStr: string) => {
   return date.toLocaleString('zh-CN')
 }
 
-// 获取应用预览URL
-const getAppPreviewUrl = (app: API.AppVO) => {
-  if (!app.codeGenType || !app.id) return ''
-  return `http://localhost:8123/api/static/${app.codeGenType}_${app.id}/`
+// 处理上一页
+const handlePrevPage = () => {
+  currentPage.value--
+  loadApps()
+}
+
+// 处理下一页
+const handleNextPage = () => {
+  currentPage.value++
+  loadApps()
 }
 </script>
 
@@ -222,35 +220,19 @@ const getAppPreviewUrl = (app: API.AppVO) => {
       <div class="search-form">
         <div class="form-item">
           <label>应用名称:</label>
-          <input 
-            v-model="searchForm.appName" 
-            placeholder="搜索应用名称"
-            class="search-input"
-          />
+          <input v-model="searchForm.appName" placeholder="搜索应用名称" class="search-input" />
         </div>
         <div class="form-item">
           <label>代码类型:</label>
-          <input 
-            v-model="searchForm.codeGenType" 
-            placeholder="搜索代码类型"
-            class="search-input"
-          />
+          <input v-model="searchForm.codeGenType" placeholder="搜索代码类型" class="search-input" />
         </div>
         <div class="form-item">
           <label>用户ID:</label>
-          <input 
-            v-model="searchForm.userId" 
-            placeholder="搜索用户ID"
-            class="search-input"
-          />
+          <input v-model="searchForm.userId" placeholder="搜索用户ID" class="search-input" />
         </div>
         <div class="form-item">
           <label>优先级:</label>
-          <input 
-            v-model="searchForm.priority" 
-            placeholder="搜索优先级"
-            class="search-input"
-          />
+          <input v-model="searchForm.priority" placeholder="搜索优先级" class="search-input" />
         </div>
         <div class="form-actions">
           <button @click="handleSearch" class="search-btn">搜索</button>
@@ -278,8 +260,8 @@ const getAppPreviewUrl = (app: API.AppVO) => {
             <td>{{ app.id }}</td>
             <td>
               <div class="app-info">
-                <img 
-                  :src="app.cover || '/default-app-cover.png'" 
+                <img
+                  :src="app.cover || '/default-app-cover.png'"
                   :alt="app.appName"
                   class="app-cover"
                 />
@@ -296,30 +278,22 @@ const getAppPreviewUrl = (app: API.AppVO) => {
             <td>{{ formatTime(app.createTime || '') }}</td>
             <td>
               <div class="action-buttons">
-                <button @click="viewApp(app)" class="action-btn view-btn">
-                  查看
-                </button>
-                <button @click="goToEdit(app)" class="action-btn edit-btn">
-                  编辑
-                </button>
-                <button @click="setFeatured(app)" class="action-btn feature-btn">
-                  精选
-                </button>
-                <button @click="handleDelete(app)" class="action-btn delete-btn">
-                  删除
-                </button>
+                <button @click="viewApp(app)" class="action-btn view-btn">查看</button>
+                <button @click="handleEdit(app)" class="action-btn edit-btn">编辑</button>
+                <button @click="setFeatured(app)" class="action-btn feature-btn">精选</button>
+                <button @click="handleDelete(app)" class="action-btn delete-btn">删除</button>
               </div>
             </td>
           </tr>
         </tbody>
       </table>
-      
+
       <!-- 加载状态 -->
       <div v-if="loading" class="loading-state">
         <div class="loading-spinner"></div>
         <p>加载中...</p>
       </div>
-      
+
       <!-- 空状态 -->
       <div v-if="!loading && apps.length === 0" class="empty-state">
         <p>暂无应用数据</p>
@@ -328,18 +302,10 @@ const getAppPreviewUrl = (app: API.AppVO) => {
 
     <!-- 分页 -->
     <div class="pagination" v-if="total > 0">
-      <button 
-        @click="currentPage--; loadApps()"
-        :disabled="currentPage <= 1"
-        class="page-btn"
-      >
-        上一页
-      </button>
-      <span class="page-info">
-        {{ currentPage }} / {{ Math.ceil(total / pageSize) }}
-      </span>
-      <button 
-        @click="currentPage++; loadApps()"
+      <button @click="handlePrevPage" :disabled="currentPage <= 1" class="page-btn">上一页</button>
+      <span class="page-info"> {{ currentPage }} / {{ Math.ceil(total / pageSize) }} </span>
+      <button
+        @click="handleNextPage"
         :disabled="currentPage >= Math.ceil(total / pageSize)"
         class="page-btn"
       >
@@ -492,7 +458,8 @@ const getAppPreviewUrl = (app: API.AppVO) => {
   gap: 12px;
 }
 
-.search-btn, .reset-btn {
+.search-btn,
+.reset-btn {
   padding: 8px 16px;
   border: none;
   border-radius: 6px;
@@ -531,7 +498,8 @@ table {
   border-collapse: collapse;
 }
 
-th, td {
+th,
+td {
   padding: 12px;
   text-align: left;
   border-bottom: 1px solid #f0f0f0;
@@ -625,7 +593,8 @@ th {
   background: #ff7875;
 }
 
-.loading-state, .empty-state {
+.loading-state,
+.empty-state {
   text-align: center;
   padding: 40px;
   color: #666;
@@ -642,8 +611,12 @@ th {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .pagination {
@@ -760,7 +733,9 @@ th {
   border-top: 1px solid #f0f0f0;
 }
 
-.cancel-btn, .save-btn, .delete-btn {
+.cancel-btn,
+.save-btn,
+.delete-btn {
   padding: 8px 16px;
   border: none;
   border-radius: 6px;
@@ -800,13 +775,13 @@ th {
   .search-form {
     grid-template-columns: 1fr;
   }
-  
+
   .action-buttons {
     flex-direction: column;
   }
-  
+
   .modal-content {
     min-width: 90%;
   }
 }
-</style> 
+</style>

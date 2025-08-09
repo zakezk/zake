@@ -59,7 +59,7 @@ const canEdit = computed(() => {
 
 // 检查是否是自己的应用
 const isOwnApp = computed(() => {
-  return appInfo.value?.userId === loginUserStore.loginUser.id?.toString()
+  return appInfo.value?.userId === loginUserStore.loginUser.id
 })
 
 // 检查是否有可用的预览
@@ -105,14 +105,14 @@ const loadAppInfo = async () => {
     if (response && typeof response === 'object') {
       // 检查是否有 data 字段
       if (response.data && response.data.code === 0) {
-        appInfo.value = response.data.data
+        appInfo.value = response.data.data || null
         console.log('应用信息加载成功:', appInfo.value?.appName)
-      } else if (response.code === 0) {
-        appInfo.value = response.data
+      } else if (response.data && response.data.code === 0) {
+        appInfo.value = response.data.data || null
         console.log('应用信息加载成功:', appInfo.value?.appName)
       } else {
         console.error('API返回错误:', response)
-        throw new Error(response.message || '加载应用信息失败')
+        throw new Error(response.data?.message || '加载应用信息失败')
       }
     } else {
       console.error('API响应格式异常:', response)
@@ -121,8 +121,8 @@ const loadAppInfo = async () => {
   } catch (error) {
     console.error('加载应用信息失败:', error)
     console.error('错误详情:', {
-      message: error.message,
-      stack: error.stack,
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
       appId: appId.value,
     })
     alert('加载应用信息失败')
@@ -144,7 +144,7 @@ const loadChatHistory = async (isLoadMore = false) => {
       lastCreateTime: isLoadMore ? lastCreateTime.value : undefined,
     })
 
-    if (response.data.code === 0) {
+    if (response.data.code === 0 && response.data.data) {
       const historyData = response.data.data
       const historyRecords = historyData.records || []
 
@@ -337,7 +337,13 @@ const handleDeploy = async () => {
     const response = await deployApp({ appId: appInfo.value.id })
 
     if (response.data.code === 0) {
-      deployedUrl.value = response.data.data
+      let url = response.data.data || ''
+      // 如果是Vue项目，需要添加dist/index.html后缀
+      if (appInfo.value.codeGenType === 'vue_project' && url) {
+        // 确保URL不以斜杠结尾，然后添加dist/index.html
+        url = url.endsWith('/') ? url + 'dist/index.html' : url + '/dist/index.html'
+      }
+      deployedUrl.value = url
       showDeploySuccessModal.value = true
     } else {
       throw new Error(response.data.message || '部署失败')
@@ -727,9 +733,9 @@ const stopDrag = () => {
           </button>
         </div>
         <div class="preview-content">
-          <div v-if="hasPreview" class="web-preview">
+          <div v-if="hasPreview && appInfo" class="web-preview">
             <iframe
-              :src="`http://localhost:8123/api/static/${appInfo.codeGenType}_${appInfo.id}/`"
+              :src="`http://localhost:8123/api/static/${appInfo.codeGenType}_${appInfo.id}${appInfo.codeGenType === 'vue_project' ? '/dist/index.html' : ''}`"
               frameborder="0"
               class="preview-iframe"
             ></iframe>
@@ -754,57 +760,6 @@ const stopDrag = () => {
               }}
             </p>
           </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 部署成功弹窗 -->
-    <div
-      v-if="showDeploySuccessModal"
-      class="modal-overlay"
-      @click="showDeploySuccessModal = false"
-    >
-      <div class="modal-content" @click.stop>
-        <div class="modal-header">
-          <h3>部署成功！</h3>
-          <button class="modal-close" @click="showDeploySuccessModal = false">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-        </div>
-        <div class="modal-body">
-          <div class="success-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-              <polyline points="22,4 12,14.01 9,11.01"></polyline>
-            </svg>
-          </div>
-          <p class="success-message">应用部署成功！</p>
-          <div class="url-section">
-            <label>访问地址：</label>
-            <div class="url-display">
-              <span class="url-text">{{ deployedUrl }}</span>
-              <button class="copy-btn" @click="handleCopyLink" title="复制链接">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                </svg>
-              </button>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn-secondary" @click="showDeploySuccessModal = false">关闭</button>
-          <button class="btn-primary" @click="handleDirectAccess">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-              <polyline points="15,3 21,3 21,9"></polyline>
-              <line x1="10" y1="14" x2="21" y2="3"></line>
-            </svg>
-            直接访问
-          </button>
         </div>
       </div>
     </div>

@@ -29,6 +29,7 @@ import com.zake.aicode.model.vo.UserVO;
 import com.zake.aicode.service.AppService;
 import com.zake.aicode.service.ChatHistoryService;
 import com.zake.aicode.service.UserService;
+import dev.langchain4j.agent.tool.P;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -87,19 +88,22 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         // 没有则生成 6 位 deployKey（大小写字母 + 数字）
         if (StrUtil.isBlank(deployKey)) {
             deployKey = RandomUtil.randomString(6);
+            // 更新应用的 deployKey
+            app.setDeployKey(deployKey);
+            app.setDeployedTime(LocalDateTime.now());
+            this.updateById(app);
         }
         // 5. 获取代码生成类型，构建源目录路径
         String codeGenType = app.getCodeGenType();
         String sourceDirName = codeGenType + "_" + appId;
         String sourceDirPath = AppConstant.CODE_OUTPUT_ROOT_DIR + File.separator + sourceDirName;
 
-// 6. 检查源目录是否存在
+        // 6. 检查源目录是否存在
         File sourceDir = new File(sourceDirPath);
         if (!sourceDir.exists() || !sourceDir.isDirectory()) {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "应用代码不存在，请先生成代码");
         }
-
-//7. Vue 项目特殊处理：执行构建
+        // 7. Vue 项目特殊处理：执行构建
         CodeGenTypeEnum codeGenTypeEnum = CodeGenTypeEnum.getEnumByValue(codeGenType);
         if (codeGenTypeEnum == CodeGenTypeEnum.VUE_PROJECT) {
             // Vue 项目需要构建
@@ -112,9 +116,25 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
             sourceDir = distDir;
             log.info("Vue 项目构建成功，将部署 dist 目录: {}", distDir.getAbsolutePath());
         }
-// 8. 复制文件到部署目录
+        // 8. 复制文件到部署目录
         String deployDirPath = AppConstant.CODE_DEPLOY_ROOT_DIR + File.separator + deployKey;
+        try {
+            FileUtil.copy(sourceDir, new File(deployDirPath), true);
+        }
+        catch (Exception e) {
+            log.error("复制文件到部署目录失败：{}", e.getMessage());
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "复制文件到部署目录失败");
+        }
         // 9. 返回可访问的 URL
+
+        // 9. 更新数据库
+        App updateApp = new App();
+        updateApp.setId(appId);
+        updateApp.setDeployKey(deployKey);
+        updateApp.setDeployedTime(LocalDateTime.now());
+        boolean updateResult = this.updateById(updateApp);
+        ThrowUtils.throwIf(!updateResult, ErrorCode.OPERATION_ERROR, "更新应用部署信息失败");
+        // 10. 得到可访问的 URL 地址
         return String.format("%s/%s/", AppConstant.CODE_DEPLOY_HOST, deployKey);
     }
 
