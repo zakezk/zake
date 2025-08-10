@@ -5,6 +5,8 @@ import { useLoginUserStore } from '@/stores/loginUser'
 import { getAppVoById, chatToGenCode, deployApp, downloadAppCode } from '@/api/appController'
 import { listAppChatHistory } from '@/api/chatHistoryController'
 import { marked } from 'marked'
+import VisualEditor from '@/components/VisualEditor.vue'
+import { Alert } from 'ant-design-vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -40,6 +42,11 @@ const showDeploySuccessModal = ref(false)
 // 下载相关
 const isDownloading = ref(false)
 
+// 可视化编辑相关
+const isEditMode = ref(false)
+const selectedElement = ref<any>(null)
+const visualEditorRef = ref<InstanceType<typeof VisualEditor>>()
+
 // 拖拽调整大小相关
 const isDragging = ref(false)
 const chatSectionWidth = ref(50) // 默认50%宽度
@@ -73,6 +80,24 @@ const hasPreview = computed(() => {
     messages.value.length > 0 &&
     !isGenerating.value
   )
+})
+
+// 格式化生成类型显示
+const formattedCodeGenType = computed(() => {
+  if (!appInfo.value?.codeGenType) return ''
+
+  const typeMap: Record<string, string> = {
+    vue_project: 'Vue 项目',
+    react_project: 'React 项目',
+    html_page: 'HTML 页面',
+    css_style: 'CSS 样式',
+    javascript_code: 'JavaScript 代码',
+    python_script: 'Python 脚本',
+    java_project: 'Java 项目',
+    nodejs_project: 'Node.js 项目',
+  }
+
+  return typeMap[appInfo.value.codeGenType] || appInfo.value.codeGenType
 })
 
 const loadAppInfo = async () => {
@@ -431,6 +456,34 @@ const handleDownload = async () => {
   }
 }
 
+// 进入可视化编辑模式
+const enterVisualEditMode = () => {
+  if (!hasPreview.value) {
+    alert('请先生成预览后再使用可视化编辑功能')
+    return
+  }
+  isEditMode.value = true
+}
+
+// 退出可视化编辑模式
+const exitVisualEditMode = () => {
+  isEditMode.value = false
+  selectedElement.value = null
+}
+
+// 处理元素选择
+const handleElementSelected = (element: any) => {
+  selectedElement.value = element
+}
+
+// 清除选中的元素
+const clearSelectedElement = () => {
+  selectedElement.value = null
+  if (visualEditorRef.value) {
+    visualEditorRef.value.clearSelectedElement()
+  }
+}
+
 // 重置生成状态
 const resetGeneratingState = () => {
   isGenerating.value = false
@@ -462,7 +515,20 @@ const handleSendClick = () => {
   }
 
   console.log('开始发送消息')
-  sendMessage(userInput.value)
+
+  // 构建包含选中元素信息的消息
+  let messageContent = userInput.value.trim()
+
+  if (selectedElement.value) {
+    const elementInfo = `\n\n[选中的元素信息]\n标签: ${selectedElement.value.tagName}\n选择器: ${selectedElement.value.selector}\n文本内容: ${selectedElement.value.textContent?.trim() || '无'}\n`
+    messageContent += elementInfo
+  }
+
+  sendMessage(messageContent)
+
+  // 发送消息后清除选中元素并退出编辑模式
+  clearSelectedElement()
+  exitVisualEditMode()
 }
 
 // 处理调试按钮点击
@@ -614,7 +680,10 @@ const stopDrag = () => {
             <polyline points="6,9 12,15 18,9"></polyline>
           </svg>
         </div>
-        <span class="app-type">应用名称</span>
+        <span class="app-type">应用类型</span>
+        <span v-if="formattedCodeGenType" class="code-gen-type">
+          {{ formattedCodeGenType }}
+        </span>
       </div>
 
       <div class="deploy-section">
@@ -714,6 +783,31 @@ const stopDrag = () => {
           </div>
         </div>
 
+        <!-- 选中的元素信息显示 -->
+        <div v-if="selectedElement" class="selected-element-display">
+          <a-alert
+            :message="`已选中: ${selectedElement.tagName}${selectedElement.className ? '.' + selectedElement.className.split(' ')[0] : ''}${selectedElement.id ? '#' + selectedElement.id : ''}`"
+            type="info"
+            show-icon
+            closable
+            @close="clearSelectedElement"
+          >
+            <template #description>
+              <div class="element-details">
+                <p><strong>标签:</strong> {{ selectedElement.tagName }}</p>
+                <p v-if="selectedElement.id"><strong>ID:</strong> {{ selectedElement.id }}</p>
+                <p v-if="selectedElement.className">
+                  <strong>类名:</strong> {{ selectedElement.className }}
+                </p>
+                <p v-if="selectedElement.textContent?.trim()">
+                  <strong>文本:</strong> {{ selectedElement.textContent.trim().substring(0, 50)
+                  }}{{ selectedElement.textContent.trim().length > 50 ? '...' : '' }}
+                </p>
+              </div>
+            </template>
+          </a-alert>
+        </div>
+
         <!-- 用户输入框 -->
         <div class="input-section">
           <textarea
@@ -726,6 +820,17 @@ const stopDrag = () => {
             ref="inputRef"
           ></textarea>
           <div class="input-actions">
+            <button
+              v-if="hasPreview && !isEditMode"
+              @click="enterVisualEditMode"
+              class="visual-edit-btn"
+              title="可视化编辑"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+              </svg>
+            </button>
             <button
               class="send-btn"
               @click="handleSendClick"
@@ -802,11 +907,13 @@ const stopDrag = () => {
         </div>
         <div class="preview-content">
           <div v-if="hasPreview && appInfo" class="web-preview">
-            <iframe
-              :src="`http://localhost:8123/api/static/${appInfo.codeGenType}_${appInfo.id}${appInfo.codeGenType === 'vue_project' ? '/dist/index.html' : ''}`"
-              frameborder="0"
-              class="preview-iframe"
-            ></iframe>
+            <VisualEditor
+              ref="visualEditorRef"
+              :iframe-src="`http://localhost:8123/api/static/${appInfo.codeGenType}_${appInfo.id}${appInfo.codeGenType === 'vue_project' ? '/dist/index.html' : ''}`"
+              :is-edit-mode="isEditMode"
+              @element-selected="handleElementSelected"
+              @edit-mode-exit="exitVisualEditMode"
+            />
           </div>
           <div v-else class="preview-placeholder">
             <div class="placeholder-icon">
@@ -856,6 +963,19 @@ const stopDrag = () => {
             </svg>
           </div>
           <p class="success-message">应用部署成功！</p>
+
+          <!-- 应用信息 -->
+          <div class="app-info-section">
+            <div class="app-info-item">
+              <label>应用名称：</label>
+              <span>{{ appInfo?.appName || '未知' }}</span>
+            </div>
+            <div v-if="formattedCodeGenType" class="app-info-item">
+              <label>生成类型：</label>
+              <span class="code-gen-type-badge">{{ formattedCodeGenType }}</span>
+            </div>
+          </div>
+
           <div class="url-section">
             <label>访问地址：</label>
             <div class="url-display">
@@ -963,6 +1083,16 @@ const stopDrag = () => {
   color: #666;
 }
 
+.code-gen-type {
+  padding: 4px 8px;
+  background: #e6f7ff;
+  color: #1890ff;
+  border: 1px solid #91d5ff;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
 .deploy-section {
   display: flex;
   align-items: center;
@@ -1057,6 +1187,45 @@ const stopDrag = () => {
 .download-btn svg {
   width: 16px;
   height: 16px;
+}
+
+.visual-edit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: #52c41a;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-right: 8px;
+}
+
+.visual-edit-btn:hover {
+  background: #73d13d;
+  transform: translateY(-1px);
+}
+
+.visual-edit-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.selected-element-display {
+  margin-bottom: 12px;
+}
+
+.selected-element-display .element-details {
+  margin-top: 8px;
+}
+
+.selected-element-display .element-details p {
+  margin: 4px 0;
+  font-size: 12px;
+  color: #666;
 }
 
 .main-content {
@@ -1385,7 +1554,7 @@ const stopDrag = () => {
 
 /* 拖拽分隔条样式 */
 .resize-handle {
-  width: 12px;
+  width: 6px;
   background: transparent;
   cursor: col-resize;
   display: flex;
@@ -1398,7 +1567,7 @@ const stopDrag = () => {
 }
 
 .resize-handle:hover {
-  background: #e0e0e0;
+  background: rgba(24, 144, 255, 0.1);
 }
 
 .resize-handle.dragging {
@@ -1998,5 +2167,45 @@ const stopDrag = () => {
 .btn-primary:hover {
   background: #40a9ff;
   transform: translateY(-1px);
+}
+
+.app-info-section {
+  margin: 20px 0;
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e8e8e8;
+}
+
+.app-info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.app-info-item:last-child {
+  margin-bottom: 0;
+}
+
+.app-info-item label {
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+.app-info-item span {
+  font-size: 14px;
+  color: #333;
+}
+
+.code-gen-type-badge {
+  padding: 4px 8px;
+  background: #e6f7ff;
+  color: #1890ff;
+  border: 1px solid #91d5ff;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
 }
 </style>

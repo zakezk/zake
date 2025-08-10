@@ -16,7 +16,6 @@ const loading = ref(true)
 const form = ref({
   id: '',
   appName: '',
-  cover: '',
 })
 
 // 提交状态
@@ -62,7 +61,6 @@ const loadAppInfo = async () => {
       form.value = {
         id: appInfo.value?.id || '',
         appName: appInfo.value?.appName || '',
-        cover: appInfo.value?.cover || '',
       }
     } else {
       throw new Error(response.data.message || '加载应用信息失败')
@@ -78,6 +76,12 @@ const loadAppInfo = async () => {
 
 // 保存修改
 const handleSave = async () => {
+  // 检查权限
+  if (!isAdmin.value && !isOwner.value) {
+    alert('您没有权限修改此应用')
+    return
+  }
+
   if (!form.value.appName.trim()) {
     alert('请输入应用名称')
     return
@@ -146,13 +150,14 @@ const previewApp = () => {
         <div class="preview-content">
           <div class="app-card">
             <img
-              :src="appInfo.cover || '/default-app-cover.png'"
+              v-if="appInfo.cover"
+              :src="appInfo.cover"
               :alt="appInfo.appName"
               class="app-cover"
             />
             <div class="app-info">
               <h4 class="app-name">{{ appInfo.appName }}</h4>
-              <p class="app-creator">创建者: {{ appInfo.user?.userName || '未知用户' }}</p>
+              <p class="app-creator">创建者: {{ appInfo.user?.userName || '未知' }}</p>
               <p class="app-time">
                 创建时间: {{ new Date(appInfo.createTime || '').toLocaleString('zh-CN') }}
               </p>
@@ -174,14 +179,31 @@ const previewApp = () => {
               placeholder="请输入应用名称"
               class="form-input"
               maxlength="50"
+              :disabled="!isAdmin && !isOwner"
             />
-            <div class="form-tip">应用名称不能超过50个字符</div>
+            <div class="form-tip">
+              {{
+                isAdmin || isOwner
+                  ? '应用名称不能超过50个字符'
+                  : '只有管理员和所有者可以修改应用名称'
+              }}
+            </div>
           </div>
 
           <div class="form-item">
-            <label>应用封面</label>
-            <input v-model="form.cover" placeholder="请输入封面图片URL" class="form-input" />
-            <div class="form-tip">支持图片URL链接，建议尺寸 300x200</div>
+            <label>作者名字</label>
+            <input :value="appInfo.user?.userName || '未知'" class="form-input" disabled />
+            <div class="form-tip">作者名字不可修改</div>
+          </div>
+
+          <div class="form-item">
+            <label>创建时间</label>
+            <input
+              :value="new Date(appInfo.createTime || '').toLocaleString('zh-CN')"
+              class="form-input"
+              disabled
+            />
+            <div class="form-tip">创建时间不可修改</div>
           </div>
 
           <div class="form-item">
@@ -208,7 +230,12 @@ const previewApp = () => {
         <button @click="handleCancel" class="cancel-btn">取消</button>
         <button @click="previewApp" class="preview-btn">预览应用</button>
         <button @click="router.push(`/app/chat/${appId}`)" class="chat-btn">返回对话</button>
-        <button @click="handleSave" :disabled="submitting || !form.appName.trim()" class="save-btn">
+        <button
+          v-if="isAdmin || isOwner"
+          @click="handleSave"
+          :disabled="submitting || !form.appName.trim()"
+          class="save-btn"
+        >
           {{ submitting ? '保存中...' : '保存修改' }}
         </button>
       </div>

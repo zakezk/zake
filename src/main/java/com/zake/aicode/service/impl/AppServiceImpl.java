@@ -8,6 +8,7 @@ import cn.hutool.core.util.StrUtil;
 import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
+import com.zake.aicode.ai.AiCodeGenTypeRoutingService;
 import com.zake.aicode.constant.AppConstant;
 import com.zake.aicode.core.AiCodeGeneratorFacade;
 import com.zake.aicode.core.builder.VueProjectBuilder;
@@ -72,6 +73,9 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
     @Resource
     private ScreenshotServiceImpl screenshotService;
 
+    @Resource
+    private AiCodeGenTypeRoutingService aiCodeGenTypeRoutingService;
+
     @Override
     public String deployApp(Long appId, User loginUser) {
         // 1. 参数校验
@@ -125,7 +129,6 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
             log.error("复制文件到部署目录失败：{}", e.getMessage());
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "复制文件到部署目录失败");
         }
-        // 9. 返回可访问的 URL
 
         // 9. 更新数据库
         App updateApp = new App();
@@ -136,6 +139,9 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         ThrowUtils.throwIf(!updateResult, ErrorCode.OPERATION_ERROR, "更新应用部署信息失败");
 // 10. 构建应用访问 URL
         String appDeployUrl = String.format("%s/%s/", AppConstant.CODE_DEPLOY_HOST, deployKey);
+        if (codeGenTypeEnum == CodeGenTypeEnum.VUE_PROJECT) {
+            appDeployUrl += "dist/index.html";
+        }
 // 11. 异步生成截图并更新应用封面
         generateAppScreenshotAsync(appId, appDeployUrl);
         return appDeployUrl;
@@ -242,8 +248,11 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         app.setUserId(loginUser.getId());
         // 应用名称暂时为 initPrompt 前 12 位
         app.setAppName(initPrompt.substring(0, Math.min(initPrompt.length(), 12)));
-        // 暂时设置为多文件生成
-        app.setCodeGenType(CodeGenTypeEnum.VUE_PROJECT.getValue());
+        // 使用 AI 智能选择代码生成类型
+        CodeGenTypeEnum selectedCodeGenType = aiCodeGenTypeRoutingService.routeCodeGenType(initPrompt);
+        app.setCodeGenType(selectedCodeGenType.getValue());
+//        // 暂时设置为多文件生成
+//        app.setCodeGenType(CodeGenTypeEnum.VUE_PROJECT.getValue());
         // 设置为默认
         app.setPriority(AppConstant.DEFAULT_APP_PRIORITY);
 
