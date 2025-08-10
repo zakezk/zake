@@ -39,7 +39,7 @@ public class WebScreenshotUtils {
     /**
      * 退出时销毁
      */
-    @PreDestroy
+    @PreDestroy//当jvm退出时，销毁webDriver
     public void destroy() {
         webDriver.quit();
     }

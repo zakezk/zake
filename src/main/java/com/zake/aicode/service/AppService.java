@@ -28,6 +28,8 @@ public interface AppService extends IService<App> {
      */
     String deployApp(Long appId, User loginUser);
 
+    void generateAppScreenshotAsync(Long appId, String appUrl);
+
     /**
      * 应用聊天生成代码（流式 SSE）
      *

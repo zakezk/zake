@@ -2,7 +2,7 @@
 import { ref, onMounted, computed, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useLoginUserStore } from '@/stores/loginUser'
-import { getAppVoById, chatToGenCode, deployApp } from '@/api/appController'
+import { getAppVoById, chatToGenCode, deployApp, downloadAppCode } from '@/api/appController'
 import { listAppChatHistory } from '@/api/chatHistoryController'
 import { marked } from 'marked'
 
@@ -36,6 +36,9 @@ const lastCreateTime = ref<string>('')
 const isDeploying = ref(false)
 const deployedUrl = ref('')
 const showDeploySuccessModal = ref(false)
+
+// 下载相关
+const isDownloading = ref(false)
 
 // 拖拽调整大小相关
 const isDragging = ref(false)
@@ -376,6 +379,58 @@ const handleCopyLink = async () => {
   }
 }
 
+// 下载应用代码
+const handleDownload = async () => {
+  if (!appInfo.value?.id) return
+
+  // 检查是否是自己的应用
+  if (!isOwnApp.value) {
+    alert('您只能下载自己的作品')
+    return
+  }
+
+  isDownloading.value = true
+  try {
+    // 直接使用fetch下载文件，因为后端返回的是文件流
+    const response = await fetch(`http://localhost:8123/api/app/download/${appInfo.value.id}`, {
+      method: 'GET',
+      credentials: 'include',
+    })
+
+    if (!response.ok) {
+      throw new Error(`下载失败: ${response.status}`)
+    }
+
+    // 获取文件名
+    const contentDisposition = response.headers.get('Content-Disposition')
+    let filename = `${appInfo.value.appName || 'app'}.zip`
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename="(.+)"/)
+      if (filenameMatch) {
+        filename = filenameMatch[1]
+      }
+    }
+
+    // 创建下载链接
+    const blob = await response.blob()
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+
+    alert('下载成功')
+  } catch (error) {
+    console.error('下载失败:', error)
+    alert('下载失败，请重试')
+  } finally {
+    isDownloading.value = false
+  }
+}
+
 // 重置生成状态
 const resetGeneratingState = () => {
   isGenerating.value = false
@@ -576,6 +631,19 @@ const stopDrag = () => {
             <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path>
           </svg>
           部署
+        </button>
+        <button
+          v-if="isOwnApp"
+          @click="handleDownload"
+          :disabled="isDownloading || !appInfo"
+          class="download-btn"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7,10 12,15 17,10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          下载代码
         </button>
       </div>
     </div>
@@ -957,6 +1025,36 @@ const stopDrag = () => {
 }
 
 .deploy-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.download-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #52c41a;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.download-btn:hover:not(:disabled) {
+  background: #73d13d;
+  transform: translateY(-1px);
+}
+
+.download-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.download-btn svg {
   width: 16px;
   height: 16px;
 }
