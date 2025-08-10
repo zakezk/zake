@@ -1,4 +1,3 @@
-
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { getLoginUser } from '@/api/userController.ts'
@@ -6,13 +5,14 @@ import { getLoginUser } from '@/api/userController.ts'
 export const useLoginUserStore = defineStore('loginUser', () => {
   // 默认值
   const loginUser = ref<API.LoginUserVO>({
+    id: '',
     userAccount: '',
     userName: '未登录',
     userAvatar: '',
     userProfile: '',
     userRole: '',
     createTime: '',
-    updateTime: ''
+    updateTime: '',
   })
 
   // 获取登录用户信息
@@ -44,13 +44,14 @@ export const useLoginUserStore = defineStore('loginUser', () => {
   // 清除登录用户信息
   function clearLoginUser() {
     loginUser.value = {
+      id: '',
       userAccount: '',
       userName: '未登录',
       userAvatar: '',
       userProfile: '',
       userRole: '',
       createTime: '',
-      updateTime: ''
+      updateTime: '',
     }
     localStorage.removeItem('userInfo')
   }
