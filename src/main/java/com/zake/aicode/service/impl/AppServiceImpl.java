@@ -110,7 +110,7 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
             boolean buildSuccess = vueProjectBuilder.buildProject(sourceDirPath);
             ThrowUtils.throwIf(!buildSuccess, ErrorCode.SYSTEM_ERROR, "Vue 项目构建失败，请重试");
             // 检查 dist 目录是否存在
-            File distDir = new File(sourceDirPath, "dist");
+            File distDir = new File(sourceDirPath, "dist");//+ dist
             ThrowUtils.throwIf(!distDir.exists(), ErrorCode.SYSTEM_ERROR, "Vue 项目构建完成但未生成 dist 目录");
             // 构建完成后，需要将构建后的文件复制到部署目录
             sourceDir = distDir;

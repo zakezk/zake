@@ -7,6 +7,9 @@ import org.springframework.stereotype.Component;
 import java.io.File;
 import java.util.concurrent.TimeUnit;
 
+/**]
+ * Vue项目构建器 npm install && npm run build
+ */
 @Slf4j
 @Component
 public class VueProjectBuilder {

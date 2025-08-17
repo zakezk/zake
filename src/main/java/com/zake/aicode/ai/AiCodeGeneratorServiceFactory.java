@@ -2,7 +2,7 @@ package com.zake.aicode.ai;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.zake.aicode.ai.tools.FileWriteTool;
+import com.zake.aicode.ai.tools.*;
 import com.zake.aicode.exception.BusinessException;
 import com.zake.aicode.exception.ErrorCode;
 import com.zake.aicode.model.enums.CodeGenTypeEnum;
@@ -15,7 +15,6 @@ import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.service.AiServices;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -49,17 +48,26 @@ public class AiCodeGeneratorServiceFactory {
     //推理流式模型（用于 Vue 项目生成，带工具调用）
     @Resource
     private StreamingChatModel reasoningStreamingChatModel;
-    
+
+
+    @Resource
+    private ToolManager toolManager;
+
     /**
      * 默认提供一个 Bean
+     * 满足之前测试用例
      */
-    @Bean
-    public AiCodeGeneratorService aiCodeGeneratorService() {
-        return getAiCodeGeneratorService(0L);
-    }
+//    @Bean
+//    public AiCodeGeneratorService aiCodeGeneratorService() {
+//        return getAiCodeGeneratorService(0L);
+//    }
 
     /**
      * AI 服务实例缓存
+     * 缓存策略：
+     * - 最大缓存 1000 个实例
+     * - 写入后 30 分钟过期
+     * - 访问后 10 分钟过期
      */
     private final Cache<String, AiCodeGeneratorService> serviceCache = Caffeine.newBuilder()
             .maximumSize(1000)
@@ -69,7 +77,7 @@ public class AiCodeGeneratorServiceFactory {
                 log.debug("AI 服务实例被移除，缓存键: {}, 原因: {}", key, cause);
             })
             .build();
-
+//
 //    /**
 //     * AI 服务实例缓存  caffeine
 //     * 缓存策略：
@@ -87,13 +95,13 @@ public class AiCodeGeneratorServiceFactory {
 //            .build();
 
 
-    /**
-     * 根据 appId 获取服务（带缓存）这个方法是为了兼容历史逻辑
-     */
-    public AiCodeGeneratorService getAiCodeGeneratorService(long appId) {
-        return getAiCodeGeneratorService(appId, CodeGenTypeEnum.HTML);
-    }
-    
+//    /**
+//     * 根据 appId 获取服务（带缓存）这个方法是为了兼容历史逻辑
+//     */
+//    public AiCodeGeneratorService getAiCodeGeneratorService(long appId) {
+//        return getAiCodeGeneratorService(appId, CodeGenTypeEnum.HTML);
+//    }
+
     /**
      * 根据 appId 和代码生成类型获取服务（带缓存）
      */
@@ -101,7 +109,7 @@ public class AiCodeGeneratorServiceFactory {
         String cacheKey = buildCacheKey(appId, codeGenType);
         return serviceCache.get(cacheKey, key -> createAiCodeGeneratorService(appId, codeGenType));
     }
-    
+
     /**
      * 构建缓存键
      */
@@ -129,7 +137,15 @@ public class AiCodeGeneratorServiceFactory {
                     .streamingChatModel(reasoningStreamingChatModel)
                     .chatMemoryProvider(memoryId -> chatMemory)
                     // 添加工具
-                    .tools(new FileWriteTool())
+                    .tools(
+//                            new FileWriteTool(),
+//                            new FileReadTool(),
+//                            new FileModifyTool(),
+//                            new FileDirReadTool(),
+//                            new FileDeleteTool()
+                            toolManager.getAllTools()
+                    )
+
                     // ai调用没有的工具 处理
                     .hallucinatedToolNameStrategy(toolExecutionRequest -> ToolExecutionResultMessage.from(
                             toolExecutionRequest, "Error: there is no tool called "
@@ -226,8 +242,6 @@ public class AiCodeGeneratorServiceFactory {
 //                .chatMemory(chatMemory)
 //                .build();
 //    }
-
-
 
 
     /**

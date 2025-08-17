@@ -52,6 +52,8 @@ public class AppController {
 
     /**
      * 应用聊天生成代码（流式 SSE）
+     * 必须写：在流式接口中显式声明
+     *  MediaType.TEXT_EVENT_STREAM_VALUE 流式响应
      *
      * @param appId   应用 ID
      * @param message 用户消息

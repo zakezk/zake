@@ -8,6 +8,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 
+/**
+ * 深度思考 推理流式模型配置
+ */
 @Configuration
 @ConfigurationProperties(prefix = "langchain4j.open-ai.chat-model")
 @Data

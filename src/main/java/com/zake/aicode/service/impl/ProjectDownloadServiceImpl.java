@@ -25,6 +25,12 @@ import java.util.Set;
 public class ProjectDownloadServiceImpl implements ProjectzDownloadService {
 
 
+    /**
+     * 项目下载
+     * @param projectPath 项目路径
+     * @param downloadFileName 下载文件名
+     * @param response 响应
+     */
 
     @Override
     public void downloadProjectAsZip(String projectPath, String downloadFileName, HttpServletResponse response) {
@@ -44,7 +50,8 @@ public class ProjectDownloadServiceImpl implements ProjectzDownloadService {
         FileFilter filter = file -> isPathAllowed(projectDir.toPath(), file.toPath());
         try {
             // 使用 Hutool 的 ZipUtil 直接将过滤后的目录压缩到响应输出流
-            ZipUtil.zip(response.getOutputStream(), StandardCharsets.UTF_8, false, filter, projectDir);
+            ZipUtil.zip(response.getOutputStream(), StandardCharsets.UTF_8,
+                    false, filter, projectDir);
             log.info("项目打包下载完成: {}", downloadFileName);
         } catch (Exception e) {
             log.error("项目打包下载异常", e);

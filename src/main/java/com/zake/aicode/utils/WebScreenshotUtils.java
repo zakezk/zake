@@ -27,6 +27,8 @@ import java.util.UUID;
 @Slf4j
 public class WebScreenshotUtils {
 
+
+    // 静态成员变量，用于保存驱动程序
     private static final WebDriver webDriver;
 
     // 全局静态初始化，避免重复初始化驱动程序：
@@ -45,7 +47,7 @@ public class WebScreenshotUtils {
     }
 
     /**
-     * 生成网页截图
+     * 生成网页截图 并压缩 保存到本地文件
      *
      * @param webUrl 要截图的网址
      * @return 压缩后的截图文件路径，失败返回 null

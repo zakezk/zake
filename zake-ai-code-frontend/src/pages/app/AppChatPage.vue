@@ -47,32 +47,47 @@
       <div class="chat-section">
         <!-- 消息区域 -->
         <div class="messages-container" ref="messagesContainer">
-          <!-- 加载更多按钮 -->
-          <div v-if="hasMoreHistory" class="load-more-container">
-            <a-button type="link" @click="loadMoreHistory" :loading="loadingHistory" size="small">
-              加载更多历史消息
-            </a-button>
-          </div>
-          <div v-for="(message, index) in messages" :key="index" class="message-item">
-            <div v-if="message.type === 'user'" class="user-message">
-              <div class="message-content">{{ message.content }}</div>
-              <div class="message-avatar">
-                <a-avatar :src="loginUserStore.loginUser.userAvatar" />
-              </div>
+          <!-- 非所有者显示提示信息 -->
+          <div v-if="!isOwner" class="visitor-notice">
+            <div class="notice-content">
+              <div class="notice-icon">👀</div>
+              <h3>精品作品展示</h3>
+              <p>您正在查看其他用户创建的精品作品</p>
+              <p class="notice-tip">如需与AI对话生成自己的网站，请先登录并创建应用</p>
             </div>
-            <div v-else class="ai-message">
-              <div class="message-avatar">
-                <a-avatar :src="aiAvatar" />
+          </div>
+
+          <!-- 所有者显示对话内容 -->
+          <template v-else>
+            <!-- 加载更多按钮 -->
+            <div v-if="hasMoreHistory" class="load-more-container">
+              <a-button type="link" @click="loadMoreHistory" :loading="loadingHistory" size="small">
+                加载更多历史消息
+              </a-button>
+            </div>
+            <div v-for="(message, index) in messages" :key="index" class="message-item">
+              <div v-if="message.type === 'user'" class="user-message">
+                <div class="message-content">{{ message.content }}</div>
+                <div class="message-avatar">
+                  <a-avatar :src="loginUserStore.loginUser.userAvatar" />
+                </div>
               </div>
-              <div class="message-content">
-                <MarkdownRenderer v-if="message.content" :content="message.content" />
-                <div v-if="message.loading" class="loading-indicator">
-                  <a-spin size="small" />
-                  <span>AI 正在思考...</span>
+              <div v-else class="ai-message">
+                <div class="message-avatar">
+                  <a-avatar :src="aiAvatar" />
+                </div>
+                <div class="message-content">
+                  <div v-if="message.content" class="ai-content">
+                    <div v-html="formatAIContent(message.content)"></div>
+                  </div>
+                  <div v-if="message.loading" class="loading-indicator">
+                    <a-spin size="small" />
+                    <span>AI 正在思考...</span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          </template>
         </div>
 
         <!-- 选中元素信息展示 -->
@@ -116,49 +131,46 @@
         <!-- 用户消息输入框 -->
         <div class="input-container">
           <div class="input-wrapper">
-            <a-tooltip v-if="!isOwner" title="无法在别人的作品下对话哦~" placement="top">
+            <!-- 非所有者显示提示信息 -->
+            <div v-if="!isOwner" class="visitor-input-notice">
+              <div class="notice-content">
+                <div class="notice-icon">💬</div>
+                <h4>对话功能</h4>
+                <p>此功能仅对作品所有者开放</p>
+                <a-button type="primary" @click="goToHome"> 创建自己的作品 </a-button>
+              </div>
+            </div>
+
+            <!-- 所有者显示输入框 -->
+            <template v-else>
               <a-textarea
                 v-model:value="userInput"
                 :placeholder="getInputPlaceholder()"
                 :rows="4"
                 :maxlength="1000"
                 @keydown.enter.prevent="sendMessage"
-                :disabled="isGenerating || !isOwner"
+                :disabled="isGenerating"
               />
-            </a-tooltip>
-            <a-textarea
-              v-else
-              v-model:value="userInput"
-              :placeholder="getInputPlaceholder()"
-              :rows="4"
-              :maxlength="1000"
-              @keydown.enter.prevent="sendMessage"
-              :disabled="isGenerating"
-            />
-            <div class="input-actions">
-              <!-- 可视化编辑按钮 -->
-              <a-button
-                v-if="isOwner && previewUrl && !isEditMode"
-                type="default"
-                @click="toggleEditMode"
-                title="可视化编辑"
-                style="margin-right: 8px"
-              >
-                <template #icon>
-                  <EditOutlined />
-                </template>
-              </a-button>
-              <a-button
-                type="primary"
-                @click="sendMessage"
-                :loading="isGenerating"
-                :disabled="!isOwner"
-              >
-                <template #icon>
-                  <SendOutlined />
-                </template>
-              </a-button>
-            </div>
+              <div class="input-actions">
+                <!-- 可视化编辑按钮 -->
+                <a-button
+                  v-if="previewUrl && !isEditMode"
+                  type="default"
+                  @click="toggleEditMode"
+                  title="可视化编辑"
+                  style="margin-right: 8px"
+                >
+                  <template #icon>
+                    <EditOutlined />
+                  </template>
+                </a-button>
+                <a-button type="primary" @click="sendMessage" :loading="isGenerating">
+                  <template #icon>
+                    <SendOutlined />
+                  </template>
+                </a-button>
+              </div>
+            </template>
           </div>
         </div>
       </div>
@@ -253,7 +265,6 @@ const formatCodeGenType = (type?: string) => {
 }
 import request from '@/request'
 
-import MarkdownRenderer from '@/components/MarkdownRenderer.vue'
 import AppDetailModal from '@/components/AppDetailModal.vue'
 import DeploySuccessModal from '@/components/DeploySuccessModal.vue'
 import aiAvatar from '@/assets/aiAvatar.svg'
@@ -340,8 +351,19 @@ const goBack = () => {
   router.push('/')
 }
 
+// 跳转到首页
+const goToHome = () => {
+  router.push('/')
+}
+
 // 加载对话历史
 const loadChatHistory = async (isLoadMore = false) => {
+  // 只有所有者才能加载对话历史
+  if (!isOwner.value) {
+    historyLoaded.value = true
+    return
+  }
+
   if (!appId.value || loadingHistory.value) return
   loadingHistory.value = true
   try {
@@ -380,6 +402,10 @@ const loadChatHistory = async (isLoadMore = false) => {
         hasMoreHistory.value = false
       }
       historyLoaded.value = true
+
+      // 加载完历史消息后，滚动到底部显示最新内容
+      await nextTick()
+      scrollToBottom()
     }
   } catch (error) {
     console.error('加载对话历史失败：', error)
@@ -412,10 +438,19 @@ const fetchAppInfo = async () => {
 
       // 先加载对话历史
       await loadChatHistory()
-      // 如果有至少2条对话记录，展示对应的网站
-      if (messages.value.length >= 2) {
+
+      // 加载完对话历史后，滚动到底部显示最新内容
+      await nextTick()
+      scrollToBottom()
+
+      // 如果是所有者且有对话记录，或者非所有者但应用有生成内容，则展示网站
+      if (isOwner.value && messages.value.length >= 2) {
+        updatePreview()
+      } else if (!isOwner.value && appInfo.value.codeGenType) {
+        // 非所有者直接展示网站，不依赖对话记录
         updatePreview()
       }
+
       // 检查是否需要自动发送初始提示词
       // 只有在是自己的应用且没有对话历史时才自动发送
       if (
@@ -463,11 +498,17 @@ const sendInitialMessage = async (prompt: string) => {
 
 // 发送消息
 const sendMessage = async () => {
+  // 只有所有者才能发送消息
+  if (!isOwner.value) {
+    message.warning('只有作品所有者才能发送消息')
+    return
+  }
+
   if (!userInput.value.trim() || isGenerating.value) {
     return
   }
 
-  let message = userInput.value.trim()
+  let userMessage = userInput.value.trim()
   // 如果有选中的元素，将元素信息添加到提示词中
   if (selectedElementInfo.value) {
     let elementContext = `\n\n选中元素信息：`
@@ -478,13 +519,13 @@ const sendMessage = async () => {
     if (selectedElementInfo.value.textContent) {
       elementContext += `\n- 当前内容: ${selectedElementInfo.value.textContent.substring(0, 100)}`
     }
-    message += elementContext
+    userMessage += elementContext
   }
   userInput.value = ''
   // 添加用户消息（包含元素信息）
   messages.value.push({
     type: 'user',
-    content: message,
+    content: userMessage,
   })
 
   // 发送消息后，清除选中元素并退出编辑模式
@@ -508,7 +549,7 @@ const sendMessage = async () => {
 
   // 开始生成
   isGenerating.value = true
-  await generateCode(message, aiMessageIndex)
+  await generateCode(userMessage, aiMessageIndex)
 }
 
 // 生成代码 - 使用 EventSource 处理流式响应
@@ -618,7 +659,10 @@ const updatePreview = () => {
 // 滚动到底部
 const scrollToBottom = () => {
   if (messagesContainer.value) {
-    messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+    messagesContainer.value.scrollTo({
+      top: messagesContainer.value.scrollHeight,
+      behavior: 'smooth',
+    })
   }
 }
 
@@ -740,6 +784,12 @@ const deleteApp = async () => {
 
 // 可视化编辑相关函数
 const toggleEditMode = () => {
+  // 只有所有者才能进行编辑
+  if (!isOwner.value) {
+    message.warning('只有作品所有者才能进行编辑')
+    return
+  }
+
   // 检查 iframe 是否已经加载
   const iframe = document.querySelector('.preview-iframe') as HTMLIFrameElement
   if (!iframe) {
@@ -767,10 +817,68 @@ const getInputPlaceholder = () => {
   return '请描述你想生成的网站，越详细效果越好哦'
 }
 
+// 格式化AI内容 - 处理Markdown格式
+const formatAIContent = (content: string) => {
+  if (!content) return ''
+
+  let formatted = content
+
+  // 处理标题 (# ## ###)
+  formatted = formatted.replace(/^### (.*$)/gim, '<h3>$1</h3>')
+  formatted = formatted.replace(/^## (.*$)/gim, '<h2>$1</h2>')
+  formatted = formatted.replace(/^# (.*$)/gim, '<h1>$1</h1>')
+
+  // 处理粗体 (**text**)
+  formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+
+  // 处理列表 (- item)
+  formatted = formatted.replace(/^- (.*$)/gim, '<li>$1</li>')
+  formatted = formatted.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
+
+  // 处理有序列表 (1. item)
+  formatted = formatted.replace(/^\d+\. (.*$)/gim, '<li>$1</li>')
+  formatted = formatted.replace(/(<li>.*<\/li>)/s, '<ol>$1</ol>')
+
+  // 处理代码块 (```language) - 渲染为代码块
+  formatted = formatted.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
+    const language = lang || 'text'
+    return `<div class="code-block-container">
+      <div class="code-header">${language.toUpperCase()}</div>
+      <pre class="code-block"><code>${escapeHtml(code.trim())}</code></pre>
+    </div>`
+  })
+
+  // 处理行内代码 (`code`)
+  formatted = formatted.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>')
+
+  // 处理段落
+  formatted = formatted.replace(/\n\n/g, '</p><p>')
+  formatted = formatted.replace(/^(?!<[h|u|o|d|p])(.*$)/gim, '<p>$1</p>')
+
+  // 清理多余的p标签
+  formatted = formatted.replace(/<p><\/p>/g, '')
+  formatted = formatted.replace(/<p>(<[h|u|o|d|p][^>]*>)/g, '$1')
+  formatted = formatted.replace(/(<\/[h|u|o|d|p][^>]*>)<\/p>/g, '$1')
+
+  return formatted
+}
+
+// HTML转义函数
+const escapeHtml = (text: string) => {
+  const div = document.createElement('div')
+  div.textContent = text
+  return div.innerHTML
+}
+
 // 页面加载时获取应用信息
-onMounted(() => {
-  fetchAppInfo()
+onMounted(async () => {
+  await fetchAppInfo()
   visualEditor.initMessageListener()
+
+  // 确保页面加载完成后滚动到底部
+  setTimeout(() => {
+    scrollToBottom()
+  }, 100)
 })
 
 // 清理资源
@@ -892,7 +1000,115 @@ onUnmounted(() => {
 .ai-message .message-content {
   background: #f5f5f5;
   color: #1a1a1a;
-  padding: 8px 12px;
+  padding: 4px 6px;
+}
+
+/* AI内容样式 */
+.ai-content {
+  width: 100%;
+  line-height: 1.2;
+  color: #333;
+  font-size: 12px;
+}
+
+/* Markdown标题样式 */
+.ai-content h1,
+.ai-content h2,
+.ai-content h3 {
+  margin: 8px 0 4px 0;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.ai-content h1 {
+  font-size: 16px;
+  border-bottom: 1px solid #e1e4e8;
+  padding-bottom: 4px;
+}
+
+.ai-content h2 {
+  font-size: 14px;
+  border-bottom: 1px solid #e1e4e8;
+  padding-bottom: 3px;
+}
+
+.ai-content h3 {
+  font-size: 12px;
+}
+
+/* Markdown段落和列表样式 */
+.ai-content p {
+  margin: 4px 0;
+  color: #333;
+}
+
+.ai-content ul,
+.ai-content ol {
+  margin: 4px 0;
+  padding-left: 15px;
+}
+
+.ai-content li {
+  margin: 2px 0;
+  color: #333;
+}
+
+.ai-content strong {
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+/* 行内代码样式 */
+.inline-code {
+  background: #f6f8fa;
+  color: #d73a49;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 12px;
+  border: 1px solid #e1e4e8;
+}
+
+/* 代码块样式 */
+.code-block-container {
+  margin: 0px !important;
+  border-radius: 0px !important;
+  overflow: hidden !important;
+  border: 1px solid #ff4d4f !important;
+  background: #f6f8fa !important;
+}
+
+.code-header {
+  background: #f6f8fa !important;
+  padding: 0px !important;
+  border-bottom: 1px solid #d0d7de !important;
+  font-size: 5px !important;
+  color: #586069 !important;
+  font-weight: 500 !important;
+  text-transform: uppercase !important;
+}
+
+.code-block {
+  background: #f6f8fa !important;
+  color: #24292f !important;
+  padding: 0px !important;
+  margin: 0 !important;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace !important;
+  font-size: 5px !important;
+  line-height: 0.6 !important;
+  overflow-x: auto !important;
+  white-space: pre-wrap !important;
+  word-wrap: break-word !important;
+  border: none !important;
+}
+
+.code-block code {
+  background: none;
+  padding: 0;
+  border: none;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
 }
 
 .message-avatar {
@@ -1053,6 +1269,75 @@ onUnmounted(() => {
   font-size: 12px;
   color: #d73a49;
   border: 1px solid #e1e4e8;
+}
+
+/* 访客提示样式 */
+.visitor-notice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 20px;
+}
+
+.visitor-notice .notice-content {
+  text-align: center;
+  max-width: 400px;
+}
+
+.visitor-notice .notice-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.visitor-notice h3 {
+  margin: 0 0 12px 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.visitor-notice p {
+  margin: 0 0 8px 0;
+  color: #666;
+  line-height: 1.5;
+}
+
+.visitor-notice .notice-tip {
+  color: #1890ff;
+  font-size: 14px;
+  margin-top: 16px;
+}
+
+.visitor-input-notice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px dashed #d9d9d9;
+}
+
+.visitor-input-notice .notice-content {
+  text-align: center;
+}
+
+.visitor-input-notice .notice-icon {
+  font-size: 32px;
+  margin-bottom: 12px;
+}
+
+.visitor-input-notice h4 {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.visitor-input-notice p {
+  margin: 0 0 16px 0;
+  color: #666;
 }
 
 /* 编辑模式按钮样式 */
