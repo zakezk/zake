@@ -613,6 +613,29 @@ const generateCode = async (userMessage: string, aiMessageIndex: number) => {
       }, 1000)
     })
 
+    // 处理business-error事件（后端限流等错误）
+    eventSource.addEventListener('business-error', function (event: MessageEvent) {
+      if (streamCompleted) return
+
+      try {
+        const errorData = JSON.parse(event.data)
+        console.error('SSE业务错误事件:', errorData)
+
+        // 显示具体的错误信息
+        const errorMessage = errorData.message || '生成过程中出现错误'
+        messages.value[aiMessageIndex].content = `❌ ${errorMessage}`
+        messages.value[aiMessageIndex].loading = false
+        message.error(errorMessage)
+
+        streamCompleted = true
+        isGenerating.value = false
+        eventSource?.close()
+      } catch (parseError) {
+        console.error('解析错误事件失败:', parseError, '原始数据:', event.data)
+        handleError(new Error('服务器返回错误'), aiMessageIndex)
+      }
+    })
+
     // 处理错误
     eventSource.onerror = function () {
       if (streamCompleted || !isGenerating.value) return
@@ -817,50 +840,13 @@ const getInputPlaceholder = () => {
   return '请描述你想生成的网站，越详细效果越好哦'
 }
 
-// 格式化AI内容 - 处理Markdown格式
+// 格式化AI内容 - 保持Markdown格式显示
 const formatAIContent = (content: string) => {
   if (!content) return ''
 
-  let formatted = content
-
-  // 处理标题 (# ## ###)
-  formatted = formatted.replace(/^### (.*$)/gim, '<h3>$1</h3>')
-  formatted = formatted.replace(/^## (.*$)/gim, '<h2>$1</h2>')
-  formatted = formatted.replace(/^# (.*$)/gim, '<h1>$1</h1>')
-
-  // 处理粗体 (**text**)
-  formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-
-  // 处理列表 (- item)
-  formatted = formatted.replace(/^- (.*$)/gim, '<li>$1</li>')
-  formatted = formatted.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
-
-  // 处理有序列表 (1. item)
-  formatted = formatted.replace(/^\d+\. (.*$)/gim, '<li>$1</li>')
-  formatted = formatted.replace(/(<li>.*<\/li>)/s, '<ol>$1</ol>')
-
-  // 处理代码块 (```language) - 渲染为代码块
-  formatted = formatted.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
-    const language = lang || 'text'
-    return `<div class="code-block-container">
-      <div class="code-header">${language.toUpperCase()}</div>
-      <pre class="code-block"><code>${escapeHtml(code.trim())}</code></pre>
-    </div>`
-  })
-
-  // 处理行内代码 (`code`)
-  formatted = formatted.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>')
-
-  // 处理段落
-  formatted = formatted.replace(/\n\n/g, '</p><p>')
-  formatted = formatted.replace(/^(?!<[h|u|o|d|p])(.*$)/gim, '<p>$1</p>')
-
-  // 清理多余的p标签
-  formatted = formatted.replace(/<p><\/p>/g, '')
-  formatted = formatted.replace(/<p>(<[h|u|o|d|p][^>]*>)/g, '$1')
-  formatted = formatted.replace(/(<\/[h|u|o|d|p][^>]*>)<\/p>/g, '$1')
-
-  return formatted
+  // 直接返回原始内容，保持markdown格式
+  // 使用pre标签和CSS样式来保持格式
+  return `<pre class="markdown-content">${escapeHtml(content)}</pre>`
 }
 
 // HTML转义函数
@@ -1350,6 +1336,43 @@ onUnmounted(() => {
 .edit-mode-active:hover {
   background-color: #73d13d !important;
   border-color: #73d13d !important;
+}
+
+/* Markdown内容样式 */
+.markdown-content {
+  font-family: 'Monaco', 'Menlo', 'Consolas', 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #24292e;
+  background: #f6f8fa;
+  border: 1px solid #e1e4e8;
+  border-radius: 6px;
+  padding: 16px;
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-x: auto;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.markdown-content::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.markdown-content::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.markdown-content::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.markdown-content::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
 }
 
 /* 响应式设计 */

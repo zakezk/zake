@@ -2,6 +2,7 @@ package com.zake.aicode.common;
 
 import com.zake.aicode.exception.ErrorCode;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 
@@ -11,7 +12,9 @@ import java.io.Serializable;
  * @param <T>
  */
 @Data
+@NoArgsConstructor
 public class BaseResponse<T> implements Serializable {
+
 
     private int code;
 

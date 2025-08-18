@@ -9,6 +9,7 @@ import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.zake.aicode.ai.AiCodeGenTypeRoutingService;
+import com.zake.aicode.ai.AiCodeGenTypeRoutingServiceFactory;
 import com.zake.aicode.constant.AppConstant;
 import com.zake.aicode.core.AiCodeGeneratorFacade;
 import com.zake.aicode.core.builder.VueProjectBuilder;
@@ -73,8 +74,9 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
     @Resource
     private ScreenshotServiceImpl screenshotService;
 
+
     @Resource
-    private AiCodeGenTypeRoutingService aiCodeGenTypeRoutingService;
+    private AiCodeGenTypeRoutingServiceFactory aiCodeGenTypeRoutingServiceFactory;
 
     @Override
     public String deployApp(Long appId, User loginUser) {
@@ -169,7 +171,8 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         if (!app.getUserId().equals(loginUser.getId())) {
             throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "无权限访问该应用");
         }
-        // 4. 获取应用的代码生成类型
+        // 4. 获取应用的代码生成类型  多利器模式
+        AiCodeGenTypeRoutingService routingService  = aiCodeGenTypeRoutingServiceFactory.createAiCodeGenTypeRoutingService();
         String codeGenTypeStr = app.getCodeGenType();
         CodeGenTypeEnum codeGenTypeEnum = CodeGenTypeEnum.getEnumByValue(codeGenTypeStr);
         if (codeGenTypeEnum == null) {
@@ -238,6 +241,7 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         // 应用名称暂时为 initPrompt 前 12 位
         app.setAppName(initPrompt.substring(0, Math.min(initPrompt.length(), 12)));
         // 使用 AI 智能选择代码生成类型
+        AiCodeGenTypeRoutingService aiCodeGenTypeRoutingService = aiCodeGenTypeRoutingServiceFactory.createAiCodeGenTypeRoutingService();
         CodeGenTypeEnum selectedCodeGenType = aiCodeGenTypeRoutingService.routeCodeGenType(initPrompt);
         app.setCodeGenType(selectedCodeGenType.getValue());
 //        // 暂时设置为多文件生成

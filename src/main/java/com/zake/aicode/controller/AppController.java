@@ -16,6 +16,8 @@ import com.zake.aicode.model.dto.app.*;
 import com.zake.aicode.model.entity.App;
 import com.zake.aicode.model.entity.User;
 import com.zake.aicode.model.vo.AppVO;
+import com.zake.aicode.ratelimter.annotation.RateLimit;
+import com.zake.aicode.ratelimter.enums.RateLimitType;
 import com.zake.aicode.service.AppService;
 import com.zake.aicode.service.ProjectzDownloadService;
 import com.zake.aicode.service.UserService;
@@ -23,6 +25,7 @@ import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.*;
@@ -61,6 +64,7 @@ public class AppController {
      * @return 生成结果流
      */
     @GetMapping(value = "/chat/gen/code", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @RateLimit(limitType = RateLimitType.USER,rate = 5, rateInterval = 60,message = "请求过于频繁，请稍后再试")//同一个用户在60s内只能请求5次
     public Flux<ServerSentEvent<String>> chatToGenCode(@RequestParam Long appId,
                                                        @RequestParam String message,
                                                        HttpServletRequest request) {
@@ -226,8 +230,14 @@ public class AppController {
      * @param appQueryRequest 查询请求
      * @return 应用列表
      */
+    @Cacheable(
+            value = "good_app_page",
+            key = "T(com.zake.aicode.utils.CacheKeyUtils).generateKey(#appQueryRequest)",//生成缓存的key
+            condition = "#appQueryRequest.pageNum <= 10"
+    )
     @PostMapping("/list/featured/page")
     public BaseResponse<Page<AppVO>> listFeaturedAppByPage(@RequestBody AppQueryRequest appQueryRequest) {
+
         ThrowUtils.throwIf(appQueryRequest == null, ErrorCode.PARAMS_ERROR);
         Page<AppVO> result = appService.listFeaturedAppByPage(appQueryRequest);
         return ResultUtils.success(result);

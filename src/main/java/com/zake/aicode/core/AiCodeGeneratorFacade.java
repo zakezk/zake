@@ -8,6 +8,8 @@ import com.zake.aicode.ai.model.MultiFileCodeResult;
 import com.zake.aicode.ai.model.message.AiResponseMessage;
 import com.zake.aicode.ai.model.message.ToolExecutedMessage;
 import com.zake.aicode.ai.model.message.ToolRequestMessage;
+import com.zake.aicode.constant.AppConstant;
+import com.zake.aicode.core.builder.VueProjectBuilder;
 import com.zake.aicode.core.parser.CodeParserExecutor;
 import com.zake.aicode.core.saver.CodeFileSaverExecutor;
 import com.zake.aicode.exception.BusinessException;
@@ -33,6 +35,9 @@ public class AiCodeGeneratorFacade {
 
 //    @Resource
 //    private AiCodeGeneratorService aiCodeGeneratorService;
+
+    @Resource
+    VueProjectBuilder vueProjectBuilder;
 
     @Resource
     private AiCodeGeneratorServiceFactory aiCodeGeneratorServiceFactory;
@@ -93,7 +98,7 @@ public class AiCodeGeneratorFacade {
             }
             case VUE_PROJECT -> {
                 TokenStream codeStream = aiCodeGeneratorService.generateVueProjectCodeStream(appId, userMessage);
-                yield processTokenStream(codeStream);
+                yield processTokenStream(codeStream,appId);
             }
             default -> {
                 String errorMessage = "不支持的生成类型：" + codeGenTypeEnum.getValue();
@@ -108,7 +113,7 @@ public class AiCodeGeneratorFacade {
      * @param tokenStream TokenStream 对象
      * @return Flux<String> 流式响应
      */
-    private Flux<String> processTokenStream(TokenStream tokenStream) {
+    private Flux<String> processTokenStream(TokenStream tokenStream,Long appId) {
         return Flux.create(sink -> {
             tokenStream
                     // 处理 AI 响应信息
@@ -129,6 +134,9 @@ public class AiCodeGeneratorFacade {
                     // 处理完成信息
                     .onCompleteResponse((ChatResponse response) -> {
                         sink.complete();
+                        //同步构造vue(保证预览时项目已经就绪）
+                        vueProjectBuilder.buildProjectAsync(AppConstant.CODE_OUTPUT_ROOT_DIR
+                                + "/vue_project_" + appId);
                     })
                     .onError((Throwable error) -> {
                         error.printStackTrace();
